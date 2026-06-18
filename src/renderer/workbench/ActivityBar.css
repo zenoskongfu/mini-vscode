@@ -1,0 +1,60 @@
+.activity-bar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: var(--color-bg-activity-bar);
+  width: var(--activity-bar-width, 48px);
+  border-right: 1px solid var(--color-border);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.activity-bar__top,
+.activity-bar__bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.activity-bar__bottom {
+  padding-bottom: 4px;
+}
+
+.activity-bar__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: none;
+  background: transparent;
+  color: var(--color-fg-activity-bar);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.activity-bar__item:hover {
+  color: var(--color-fg-activity-bar-active);
+}
+
+.activity-bar__item--active {
+  color: var(--color-fg-activity-bar-active);
+}
+
+/* Left edge indicator bar — matches VSCode's active view highlight */
+.activity-bar__active-indicator {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 24px;
+  background: var(--color-fg-activity-bar-active);
+  border-radius: 0 2px 2px 0;
+}
+
+.activity-bar__item svg {
+  flex-shrink: 0;
+}

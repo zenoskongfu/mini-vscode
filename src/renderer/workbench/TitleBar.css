@@ -1,0 +1,63 @@
+.title-bar {
+  display: flex;
+  align-items: center;
+  background: var(--color-bg-title-bar);
+  color: var(--color-fg-title-bar);
+  height: var(--title-bar-height, 28px);
+  /* -webkit-app-region: drag allows dragging the window via this element */
+  -webkit-app-region: drag;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-small);
+  flex-shrink: 0;
+}
+
+/* macOS traffic light spacer */
+.title-bar__mac-spacer {
+  width: 72px;
+  flex-shrink: 0;
+}
+
+.title-bar__center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.title-bar__app-name {
+  font-size: var(--font-size-small);
+  color: var(--color-fg-muted);
+  font-weight: 400;
+}
+
+/* Windows/Linux window controls */
+.title-bar__controls {
+  display: flex;
+  /* buttons must NOT be draggable */
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;
+}
+
+.title-bar__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: var(--title-bar-height, 28px);
+  border: none;
+  background: transparent;
+  color: var(--color-fg-title-bar);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.title-bar__btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.title-bar__btn--close:hover {
+  background: #c42b1c;
+  color: #ffffff;
+}

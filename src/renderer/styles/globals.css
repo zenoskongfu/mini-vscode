@@ -1,0 +1,175 @@
+/* ============================================================
+   CSS Custom Properties — VS Dark+ theme (default)
+   All components reference these variables, never hardcoded colors.
+   ThemeService swaps them at runtime for light/custom themes.
+   ============================================================ */
+:root {
+  /* Background layers */
+  --color-bg-workbench: #1e1e1e;
+  --color-bg-sidebar: #252526;
+  --color-bg-editor: #1e1e1e;
+  --color-bg-panel: #1e1e1e;
+  --color-bg-activity-bar: #333333;
+  --color-bg-title-bar: #3c3c3c;
+  --color-bg-status-bar: #007acc;
+  --color-bg-input: #3c3c3c;
+  --color-bg-dropdown: #252526;
+  --color-bg-hover: #2a2d2e;
+  --color-bg-active: #37373d;
+  --color-bg-selected: #094771;
+
+  /* Foreground / text */
+  --color-fg-default: #cccccc;
+  --color-fg-muted: #858585;
+  --color-fg-active: #ffffff;
+  --color-fg-disabled: #5a5a5a;
+  --color-fg-activity-bar: #858585;
+  --color-fg-activity-bar-active: #ffffff;
+  --color-fg-status-bar: #ffffff;
+  --color-fg-title-bar: #cccccc;
+
+  /* Borders */
+  --color-border: #454545;
+  --color-border-focus: #007fd4;
+
+  /* Accent */
+  --color-accent: #007acc;
+  --color-accent-hover: #0062a3;
+
+  /* Editor */
+  --color-editor-line-highlight: #282828;
+  --color-editor-selection: #264f78;
+  --color-editor-cursor: #aeafad;
+  --color-editor-line-number: #858585;
+  --color-editor-line-number-active: #c6c6c6;
+
+  /* Tabs */
+  --color-tab-active-bg: #1e1e1e;
+  --color-tab-active-border: #007acc;
+  --color-tab-inactive-bg: #2d2d2d;
+  --color-tab-inactive-fg: #858585;
+
+  /* Panel tabs */
+  --color-panel-tab-active-border: #007acc;
+
+  /* Git colors */
+  --color-git-added: #81b88b;
+  --color-git-modified: #e2c08d;
+  --color-git-deleted: #c74e39;
+  --color-git-untracked: #73c991;
+
+  /* Diagnostic colors */
+  --color-error: #f48771;
+  --color-warning: #cca700;
+  --color-info: #75beff;
+
+  /* Notification */
+  --color-bg-notification: #252526;
+  --color-notification-border: #007acc;
+
+  /* Scrollbar */
+  --color-scrollbar-thumb: #424242;
+  --color-scrollbar-thumb-hover: #686868;
+
+  /* Typography */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI',
+    system-ui, sans-serif;
+  --font-family-mono: 'SF Mono', 'Cascadia Code', 'Consolas', 'Courier New',
+    monospace;
+  --font-size-ui: 13px;
+  --font-size-small: 11px;
+  --font-size-mono: 13px;
+
+  /* Layout dimensions */
+  --title-bar-height: 28px;
+  --activity-bar-width: 48px;
+  --sidebar-width: 240px;
+  --panel-height: 220px;
+  --status-bar-height: 22px;
+  --tab-height: 35px;
+  --breadcrumb-height: 22px;
+
+  /* Resize handle */
+  --resize-handle-size: 4px;
+
+  /* Z-index layers */
+  --z-overlay: 100;
+  --z-command-palette: 200;
+  --z-context-menu: 300;
+  --z-notification: 400;
+  --z-tooltip: 500;
+
+  /* Animation */
+  --transition-fast: 80ms ease;
+  --transition-normal: 150ms ease;
+}
+
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-ui);
+  color: var(--color-fg-default);
+  background-color: var(--color-bg-workbench);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* Allow text selection in editor-like areas */
+.selectable {
+  user-select: text;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar-thumb);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scrollbar-thumb-hover);
+}
+
+/* Focus outline reset — components handle their own focus styles */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 1px solid var(--color-border-focus);
+  outline-offset: -1px;
+}
+
+/* Utility */
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}

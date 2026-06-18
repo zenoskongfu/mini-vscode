@@ -1,0 +1,150 @@
+import React from 'react'
+import './ActivityBar.css'
+
+interface ActivityBarProps {
+  className?: string
+  activeView: string
+  onViewChange: (view: string) => void
+  onToggleSidebar: () => void
+  onTogglePanel: () => void
+}
+
+interface ViewItem {
+  id: string
+  title: string
+  icon: React.ReactNode
+}
+
+/**
+ * The vertical icon strip on the far left.
+ * Clicking an icon switches the sidebar view (Explorer, Search, SCM, Extensions).
+ * Clicking the active icon again toggles the sidebar closed.
+ *
+ * Bottom section holds Settings and Terminal toggle (not a sidebar view).
+ */
+export function ActivityBar({
+  className = '',
+  activeView,
+  onViewChange,
+  onToggleSidebar,
+  onTogglePanel
+}: ActivityBarProps): React.JSX.Element {
+  const topViews: ViewItem[] = [
+    { id: 'explorer',   title: 'Explorer (Ctrl+Shift+E)',   icon: <ExplorerIcon /> },
+    { id: 'search',     title: 'Search (Ctrl+Shift+F)',     icon: <SearchIcon /> },
+    { id: 'scm',        title: 'Source Control (Ctrl+Shift+G)', icon: <SCMIcon /> },
+    { id: 'extensions', title: 'Extensions (Ctrl+Shift+X)', icon: <ExtensionsIcon /> },
+  ]
+
+  const handleViewClick = (id: string): void => {
+    if (id === activeView) {
+      onToggleSidebar()
+    } else {
+      onViewChange(id)
+    }
+  }
+
+  return (
+    <aside className={`activity-bar ${className}`}>
+      {/* Top: primary views */}
+      <div className="activity-bar__top">
+        {topViews.map(view => (
+          <button
+            key={view.id}
+            className={`activity-bar__item ${activeView === view.id ? 'activity-bar__item--active' : ''}`}
+            title={view.title}
+            onClick={() => handleViewClick(view.id)}
+          >
+            {view.icon}
+            {activeView === view.id && (
+              <span className="activity-bar__active-indicator" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Bottom: settings + terminal */}
+      <div className="activity-bar__bottom">
+        <button
+          className="activity-bar__item"
+          title="Toggle Panel (Ctrl+`)"
+          onClick={onTogglePanel}
+        >
+          <TerminalIcon />
+        </button>
+        <button
+          className={`activity-bar__item ${activeView === 'settings' ? 'activity-bar__item--active' : ''}`}
+          title="Settings"
+          onClick={() => handleViewClick('settings')}
+        >
+          <SettingsIcon />
+        </button>
+      </div>
+    </aside>
+  )
+}
+
+/* ── SVG Icon components (inline, matching VSCode's Codicons style) ── */
+
+function ExplorerIcon(): React.JSX.Element {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M3 5C3 3.9 3.9 3 5 3h6l2 2h8c1.1 0 2 .9 2 2v11c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V5z"
+        stroke="currentColor" strokeWidth="1.5" fill="none" />
+    </svg>
+  )
+}
+
+function SearchIcon(): React.JSX.Element {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="16.5" y1="16.5" x2="21" y2="21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function SCMIcon(): React.JSX.Element {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="7" cy="6" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="7" cy="18" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="17" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M7 8.5v7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M7 8.5C7 8.5 7 11 10 11h4a3 3 0 003-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+    </svg>
+  )
+}
+
+function ExtensionsIcon(): React.JSX.Element {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="3" width="8" height="8" rx="1" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="13" y="3" width="8" height="8" rx="1" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="3" y="13" width="8" height="8" rx="1" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M13 17h8M17 13v8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function TerminalIcon(): React.JSX.Element {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M7 9l4 3.5L7 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <line x1="13" y1="16" x2="17" y2="16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function SettingsIcon(): React.JSX.Element {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+        stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+      />
+    </svg>
+  )
+}

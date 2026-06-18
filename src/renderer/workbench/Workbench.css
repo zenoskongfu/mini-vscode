@@ -1,0 +1,88 @@
+/* ============================================================
+   Workbench — main CSS Grid layout
+   ============================================================ */
+
+.workbench {
+  display: grid;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+
+  /*
+   * Columns: [activity-bar] [sidebar] [center]
+   * Sidebar width is a CSS variable toggled by sidebarVisible state.
+   */
+  grid-template-columns:
+    var(--activity-bar-width, 48px)
+    var(--sidebar-width, 240px)
+    1fr;
+
+  /*
+   * Rows: [title-bar] [main-content] [status-bar]
+   * The center column handles editor + panel split internally.
+   */
+  grid-template-rows:
+    var(--title-bar-height, 28px)
+    1fr
+    var(--status-bar-height, 22px);
+
+  grid-template-areas:
+    'titlebar   titlebar  titlebar'
+    'activitybar sidebar  center'
+    'statusbar  statusbar statusbar';
+}
+
+/* ── Grid area assignments ── */
+.workbench__titlebar    { grid-area: titlebar; }
+.workbench__activitybar { grid-area: activitybar; }
+.workbench__sidebar     { grid-area: sidebar; }
+.workbench__center      { grid-area: center; }
+.workbench__statusbar   { grid-area: statusbar; }
+
+/* ── Center column: editor on top, panel on bottom ── */
+.workbench__center {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;  /* prevent flex children from overflowing */
+}
+
+.workbench__editor {
+  flex: 1;
+  min-height: 0;
+}
+
+.workbench__panel {
+  height: var(--panel-height, 220px);
+  min-height: 0;
+  flex-shrink: 0;
+}
+
+/* ── Resize handles ── */
+.workbench__resize-handle {
+  position: relative;
+  z-index: 10;
+  transition: background var(--transition-fast);
+}
+
+.workbench__resize-handle--sidebar {
+  grid-area: sidebar;
+  /* Sits on the right edge of the sidebar column */
+  justify-self: end;
+  width: var(--resize-handle-size, 4px);
+  height: 100%;
+  cursor: ew-resize;
+}
+
+.workbench__resize-handle--panel {
+  width: 100%;
+  height: var(--resize-handle-size, 4px);
+  cursor: ns-resize;
+  flex-shrink: 0;
+}
+
+.workbench__resize-handle:hover,
+.workbench__resize-handle:active {
+  background: var(--color-accent);
+  opacity: 0.6;
+}
