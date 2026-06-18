@@ -1,0 +1,103 @@
+.editor-tabs {
+  display: flex;
+  align-items: stretch;
+  height: var(--tab-height, 35px);
+  background: var(--color-tab-inactive-bg);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.editor-tabs::-webkit-scrollbar {
+  height: 3px;
+}
+
+.editor-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 0 12px;
+  height: 100%;
+  min-width: 120px;
+  max-width: 200px;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-tab-inactive-bg);
+  color: var(--color-tab-inactive-fg);
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.editor-tab:hover {
+  background: var(--color-bg-hover);
+}
+
+.editor-tab--active {
+  background: var(--color-tab-active-bg);
+  color: var(--color-fg-active);
+}
+
+.editor-tab--active::before {
+  /* top accent line on the active tab */
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--color-tab-active-border);
+}
+
+.editor-tab__icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.editor-tab__name {
+  flex: 1;
+  font-size: var(--font-size-ui);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editor-tab__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--color-fg-muted);
+  cursor: pointer;
+  border-radius: 3px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition-fast), background var(--transition-fast);
+}
+
+.editor-tab:hover .editor-tab__close,
+.editor-tab--active .editor-tab__close {
+  opacity: 1;
+}
+
+/* keep dirty dot always visible */
+.editor-tab__close--dirty {
+  opacity: 1;
+}
+
+.editor-tab__close:hover {
+  background: var(--color-bg-active);
+  color: var(--color-fg-default);
+}
+
+.editor-tab__dirty-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-fg-default);
+}

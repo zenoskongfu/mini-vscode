@@ -1,0 +1,15 @@
+.monaco-editor-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.monaco-editor-wrapper__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-ui);
+}

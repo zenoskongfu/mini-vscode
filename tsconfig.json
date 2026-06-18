@@ -1,7 +1,13 @@
 {
-  "files": [],
+  "files": [
+    "src/renderer/index.d.ts"
+  ],
   "references": [
-    { "path": "./tsconfig.node.json" },
-    { "path": "./tsconfig.web.json" }
+    {
+      "path": "./tsconfig.node.json"
+    },
+    {
+      "path": "./tsconfig.web.json"
+    }
   ]
 }

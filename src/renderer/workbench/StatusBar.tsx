@@ -1,9 +1,10 @@
 import React from 'react'
+import { useEditorState } from '../store/editor-store'
 import './StatusBar.css'
 
 interface StatusBarProps {
   className?: string
-  openFilePath?: string | null
+  cursor?: { line: number; column: number }
 }
 
 const EXT_LANGUAGE: Record<string, string> = {
@@ -15,9 +16,14 @@ const EXT_LANGUAGE: Record<string, string> = {
   sh: 'Shell', yml: 'YAML', yaml: 'YAML'
 }
 
-export function StatusBar({ className = '', openFilePath }: StatusBarProps): React.JSX.Element {
-  const ext = openFilePath?.split('.').pop()?.toLowerCase() ?? ''
-  const language = EXT_LANGUAGE[ext] ?? (openFilePath ? 'Plain Text' : 'TypeScript')
+export function StatusBar({ className = '', cursor }: StatusBarProps): React.JSX.Element {
+  const { tabs, activePath } = useEditorState()
+  const activeTab = tabs.find(t => t.path === activePath) ?? null
+
+  const ext = activeTab?.path.split('.').pop()?.toLowerCase() ?? ''
+  const language = activeTab ? (EXT_LANGUAGE[ext] ?? 'Plain Text') : 'TypeScript'
+  const lineCol = activeTab ? `Ln ${cursor?.line ?? 1}, Col ${cursor?.column ?? 1}` : 'Ln 1, Col 1'
+
   return (
     <footer className={`status-bar ${className}`}>
       {/* Left section */}
@@ -28,7 +34,7 @@ export function StatusBar({ className = '', openFilePath }: StatusBarProps): Rea
 
       {/* Right section */}
       <div className="status-bar__section status-bar__section--right">
-        <StatusItem text="Ln 1, Col 1" title="Go to Line/Column" />
+        {activeTab && <StatusItem text={lineCol} title="Go to Line/Column" />}
         <StatusItem text="UTF-8" title="File encoding" />
         <StatusItem text="LF" title="End of line sequence" />
         <StatusItem text={language} title="Language mode" />

@@ -1,31 +1,38 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback } from 'react'
+import {
+  useEditorState,
+  activateTab,
+  closeTab,
+  updateTabContent,
+  saveTab
+} from '../store/editor-store'
+import { EditorTabs } from '../components/editor/EditorTabs'
+import { Breadcrumbs } from '../components/editor/Breadcrumbs'
+import { MonacoEditor } from '../components/editor/MonacoEditor'
 import './EditorArea.css'
 
 interface EditorAreaProps {
   className?: string
-  openFilePath: string | null
+  onCursorChange?: (line: number, column: number) => void
 }
 
 /**
- * Editor area.
- * Phase 2: shows file name + raw text content (plain <pre>).
- * Phase 3: replaced with MonacoEditor + EditorTabs + Breadcrumbs.
+ * Editor area: tab strip + breadcrumbs + Monaco editor.
+ * Reads open tabs from the editor store (TabService).
  */
-export function EditorArea({ className = '', openFilePath }: EditorAreaProps): React.JSX.Element {
-  const [content, setContent] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export function EditorArea({ className = '', onCursorChange }: EditorAreaProps): React.JSX.Element {
+  const { tabs, activePath } = useEditorState()
+  const activeTab = tabs.find(t => t.path === activePath) ?? null
 
-  useEffect(() => {
-    if (!openFilePath) { setContent(null); setError(null); return }
-    setLoading(true)
-    setError(null)
-    window.electronAPI.fs.readFile(openFilePath)
-      .then((text: string) => { setContent(text); setLoading(false) })
-      .catch((e: Error) => { setError(e.message); setLoading(false) })
-  }, [openFilePath])
+  const handleChange = useCallback((value: string) => {
+    if (activePath) updateTabContent(activePath, value)
+  }, [activePath])
 
-  if (!openFilePath) {
+  const handleSave = useCallback(() => {
+    if (activePath) saveTab(activePath)
+  }, [activePath])
+
+  if (!activeTab) {
     return (
       <div className={`editor-area ${className}`}>
         <WelcomeScreen />
@@ -33,38 +40,22 @@ export function EditorArea({ className = '', openFilePath }: EditorAreaProps): R
     )
   }
 
-  const fileName = openFilePath.split('/').pop() ?? openFilePath
-
   return (
     <div className={`editor-area ${className}`}>
-      {/* Minimal tab strip — Phase 3 will replace with full EditorTabs */}
-      <div className="editor-area__tab-strip">
-        <div className="editor-area__tab editor-area__tab--active">
-          <span className="editor-area__tab-name">{fileName}</span>
-          <span className="editor-area__tab-path">{openFilePath}</span>
-        </div>
-      </div>
-
-      {/* Minimal breadcrumb */}
-      <div className="editor-area__breadcrumb">
-        {openFilePath.split('/').map((part, i, arr) => (
-          <React.Fragment key={i}>
-            <span className={i === arr.length - 1 ? 'editor-area__crumb--active' : 'editor-area__crumb'}>
-              {part}
-            </span>
-            {i < arr.length - 1 && <span className="editor-area__crumb-sep">›</span>}
-          </React.Fragment>
-        ))}
-      </div>
-
-      {/* Content */}
-      <div className="editor-area__content selectable">
-        {loading && <div className="editor-area__status">Loading…</div>}
-        {error   && <div className="editor-area__status editor-area__status--error">{error}</div>}
-        {!loading && !error && content !== null && (
-          <pre className="editor-area__pre">{content}</pre>
-        )}
-      </div>
+      <EditorTabs
+        tabs={tabs}
+        activePath={activePath}
+        onActivate={activateTab}
+        onClose={closeTab}
+      />
+      <Breadcrumbs filePath={activeTab.path} />
+      <MonacoEditor
+        path={activeTab.path}
+        value={activeTab.content}
+        onChange={handleChange}
+        onSave={handleSave}
+        onCursorChange={onCursorChange}
+      />
     </div>
   )
 }

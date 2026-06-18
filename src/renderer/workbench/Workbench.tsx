@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar'
 import { EditorArea } from './EditorArea'
 import { Panel } from './Panel'
 import { StatusBar } from './StatusBar'
+import { openFileInTab } from '../store/editor-store'
 import './Workbench.css'
 
 /**
@@ -28,8 +29,8 @@ export function Workbench(): React.JSX.Element {
   const [panelVisible, setPanelVisible] = useState(true)
   const [activeView, setActiveView] = useState<string>('explorer')
 
-  // The currently open file path — passed down to EditorArea
-  const [openFilePath, setOpenFilePath] = useState<string | null>(null)
+  // Cursor position reported by Monaco — shown in the status bar
+  const [cursor, setCursor] = useState({ line: 1, column: 1 })
 
   // Drag-resize: sidebar width
   const handleSidebarResize = useCallback((e: React.MouseEvent): void => {
@@ -86,7 +87,7 @@ export function Workbench(): React.JSX.Element {
           <Sidebar
             className="workbench__sidebar"
             activeView={activeView}
-            onOpenFile={setOpenFilePath}
+            onOpenFile={openFileInTab}
           />
           <div
             className="workbench__resize-handle workbench__resize-handle--sidebar"
@@ -96,7 +97,10 @@ export function Workbench(): React.JSX.Element {
       )}
 
       <div className="workbench__center">
-        <EditorArea className="workbench__editor" openFilePath={openFilePath} />
+        <EditorArea
+          className="workbench__editor"
+          onCursorChange={(line, column) => setCursor({ line, column })}
+        />
 
         {panelVisible && (
           <>
@@ -109,7 +113,7 @@ export function Workbench(): React.JSX.Element {
         )}
       </div>
 
-      <StatusBar className="workbench__statusbar" openFilePath={openFilePath} />
+      <StatusBar className="workbench__statusbar" cursor={cursor} />
     </div>
   )
 }
