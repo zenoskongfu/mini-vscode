@@ -1,0 +1,115 @@
+.file-explorer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* No workspace state */
+.file-explorer__no-workspace {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 24px 16px;
+  gap: 12px;
+  text-align: center;
+}
+
+.file-explorer__hint {
+  font-size: var(--font-size-ui);
+  color: var(--color-fg-muted);
+  line-height: 1.5;
+}
+
+.file-explorer__open-btn {
+  padding: 6px 14px;
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  border-radius: 3px;
+  font-size: var(--font-size-ui);
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.file-explorer__open-btn:hover {
+  background: var(--color-accent-hover);
+}
+
+/* Workspace header */
+.file-explorer__workspace-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 4px 12px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.file-explorer__workspace-name {
+  font-size: var(--font-size-small);
+  font-weight: 700;
+  color: var(--color-fg-muted);
+  letter-spacing: 0.04em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-explorer__actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.file-explorer__workspace-header:hover .file-explorer__actions {
+  opacity: 1;
+}
+
+.file-explorer__action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--color-fg-muted);
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.file-explorer__action-btn:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-fg-default);
+}
+
+/* Inline create input */
+.file-explorer__inline-create {
+  padding: 2px 8px;
+}
+
+.file-explorer__inline-input {
+  width: 100%;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-focus);
+  color: var(--color-fg-default);
+  font-size: var(--font-size-ui);
+  font-family: var(--font-family);
+  padding: 2px 6px;
+  border-radius: 2px;
+  outline: none;
+}
+
+/* Tree scroll area */
+.file-explorer__tree {
+  flex: 1;
+  overflow: auto;
+  padding: 2px 0;
+}

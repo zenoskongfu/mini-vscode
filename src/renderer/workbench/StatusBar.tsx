@@ -3,15 +3,21 @@ import './StatusBar.css'
 
 interface StatusBarProps {
   className?: string
+  openFilePath?: string | null
 }
 
-/**
- * Bottom status bar.
- * Phase 1: static placeholder values.
- * Phase 3+: real language mode, line/col from Monaco cursor.
- * Phase 8+: git branch from GitService.
- */
-export function StatusBar({ className = '' }: StatusBarProps): React.JSX.Element {
+const EXT_LANGUAGE: Record<string, string> = {
+  ts: 'TypeScript', tsx: 'TypeScript React',
+  js: 'JavaScript', jsx: 'JavaScript React',
+  json: 'JSON', css: 'CSS', scss: 'SCSS',
+  html: 'HTML', md: 'Markdown',
+  py: 'Python', rs: 'Rust', go: 'Go',
+  sh: 'Shell', yml: 'YAML', yaml: 'YAML'
+}
+
+export function StatusBar({ className = '', openFilePath }: StatusBarProps): React.JSX.Element {
+  const ext = openFilePath?.split('.').pop()?.toLowerCase() ?? ''
+  const language = EXT_LANGUAGE[ext] ?? (openFilePath ? 'Plain Text' : 'TypeScript')
   return (
     <footer className={`status-bar ${className}`}>
       {/* Left section */}
@@ -25,7 +31,7 @@ export function StatusBar({ className = '' }: StatusBarProps): React.JSX.Element
         <StatusItem text="Ln 1, Col 1" title="Go to Line/Column" />
         <StatusItem text="UTF-8" title="File encoding" />
         <StatusItem text="LF" title="End of line sequence" />
-        <StatusItem text="TypeScript" title="Language mode" />
+        <StatusItem text={language} title="Language mode" />
         <StatusItem icon={<BellIcon />} title="No notifications" />
       </div>
     </footer>

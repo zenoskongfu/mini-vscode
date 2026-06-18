@@ -1,0 +1,60 @@
+.file-tree-node__row {
+  display: flex;
+  align-items: center;
+  height: 22px;
+  cursor: pointer;
+  border-radius: 3px;
+  gap: 4px;
+  padding-right: 8px;
+  transition: background var(--transition-fast);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.file-tree-node__row:hover {
+  background: var(--color-bg-hover);
+}
+
+.file-tree-node__row--file {
+  padding-left: 20px; /* compensates for no arrow */
+}
+
+.file-tree-node__arrow {
+  display: flex;
+  align-items: center;
+  width: 12px;
+  flex-shrink: 0;
+  color: var(--color-fg-muted);
+}
+
+.file-tree-node__arrow--hidden {
+  visibility: hidden;
+}
+
+.file-tree-node__icon {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.file-tree-node__name {
+  font-size: var(--font-size-ui);
+  color: var(--color-fg-default);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Inline rename input */
+.file-tree-node__rename-input {
+  flex: 1;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border-focus);
+  color: var(--color-fg-default);
+  font-size: var(--font-size-ui);
+  font-family: var(--font-family);
+  padding: 1px 4px;
+  border-radius: 2px;
+  outline: none;
+  min-width: 0;
+}

@@ -1,0 +1,11 @@
+.file-tree {
+  width: 100%;
+}
+
+.file-tree__loading,
+.file-tree__empty {
+  font-size: var(--font-size-small);
+  color: var(--color-fg-disabled);
+  padding: 4px 0;
+  font-style: italic;
+}

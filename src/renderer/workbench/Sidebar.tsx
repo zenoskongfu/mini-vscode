@@ -1,19 +1,14 @@
 import React from 'react'
+import { FileExplorer } from '../components/explorer/FileExplorer'
 import './Sidebar.css'
 
 interface SidebarProps {
   className?: string
   activeView: string
+  onOpenFile: (path: string) => void
 }
 
-/**
- * Collapsible sidebar container.
- * Renders the appropriate panel based on the active view from ActivityBar.
- *
- * Phase 1: shows placeholder panels.
- * Phase 2+: each view is replaced with its real component.
- */
-export function Sidebar({ className = '', activeView }: SidebarProps): React.JSX.Element {
+export function Sidebar({ className = '', activeView, onOpenFile }: SidebarProps): React.JSX.Element {
   const viewTitle: Record<string, string> = {
     explorer:   'EXPLORER',
     search:     'SEARCH',
@@ -28,7 +23,11 @@ export function Sidebar({ className = '', activeView }: SidebarProps): React.JSX
         <span className="sidebar__title">{viewTitle[activeView] ?? activeView.toUpperCase()}</span>
       </div>
       <div className="sidebar__content">
-        <SidebarPlaceholder view={activeView} />
+        {activeView === 'explorer' ? (
+          <FileExplorer onOpenFile={onOpenFile} />
+        ) : (
+          <SidebarPlaceholder view={activeView} />
+        )}
       </div>
     </aside>
   )
@@ -36,13 +35,11 @@ export function Sidebar({ className = '', activeView }: SidebarProps): React.JSX
 
 function SidebarPlaceholder({ view }: { view: string }): React.JSX.Element {
   const descriptions: Record<string, string> = {
-    explorer:   'Open a folder to browse files',
     search:     'Search across files in the workspace',
     scm:        'Git status and source control',
     extensions: 'Manage extensions',
     settings:   'Configure the editor'
   }
-
   return (
     <div className="sidebar-placeholder">
       <p className="sidebar-placeholder__text">

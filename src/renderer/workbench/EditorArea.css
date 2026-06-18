@@ -7,6 +7,107 @@
   min-height: 0;
 }
 
+/* Tab strip (Phase 2 minimal — replaced by EditorTabs in Phase 3) */
+.editor-area__tab-strip {
+  display: flex;
+  align-items: center;
+  height: var(--tab-height, 35px);
+  background: var(--color-tab-inactive-bg);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.editor-area__tab {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 12px;
+  height: 100%;
+  border-right: 1px solid var(--color-border);
+  cursor: pointer;
+  min-width: 0;
+  max-width: 200px;
+}
+
+.editor-area__tab--active {
+  background: var(--color-tab-active-bg);
+  border-top: 1px solid var(--color-tab-active-border);
+}
+
+.editor-area__tab-name {
+  font-size: var(--font-size-ui);
+  color: var(--color-fg-default);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editor-area__tab-path {
+  font-size: 10px;
+  color: var(--color-fg-disabled);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Breadcrumb */
+.editor-area__breadcrumb {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  height: var(--breadcrumb-height, 22px);
+  background: var(--color-bg-editor);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+  overflow: hidden;
+  gap: 2px;
+  font-size: var(--font-size-small);
+}
+
+.editor-area__crumb {
+  color: var(--color-fg-muted);
+  white-space: nowrap;
+}
+
+.editor-area__crumb--active {
+  color: var(--color-fg-default);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.editor-area__crumb-sep {
+  color: var(--color-fg-disabled);
+  margin: 0 1px;
+}
+
+/* Content */
+.editor-area__content {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+.editor-area__pre {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-mono);
+  color: var(--color-fg-default);
+  white-space: pre;
+  padding: 12px 16px;
+  line-height: 1.5;
+  tab-size: 2;
+}
+
+.editor-area__status {
+  padding: 16px;
+  color: var(--color-fg-muted);
+  font-size: var(--font-size-ui);
+}
+
+.editor-area__status--error {
+  color: var(--color-error);
+}
+
 /* Welcome screen */
 .welcome-screen {
   display: flex;

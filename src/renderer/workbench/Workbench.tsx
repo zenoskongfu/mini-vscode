@@ -10,20 +10,16 @@ import './Workbench.css'
 /**
  * The main workbench shell.
  *
- * Layout mirrors VSCode's CSS Grid approach:
- *
+ * Layout (CSS Grid):
  *   ┌──────────────────────────────────┐
- *   │           TitleBar               │ ← 28px
+ *   │           TitleBar               │ 28px
  *   ├────┬──────────┬───────────────────┤
- *   │ AB │ Sidebar  │   EditorArea      │ ← flex: 1
+ *   │ AB │ Sidebar  │   EditorArea      │ flex: 1
  *   │    │          ├───────────────────┤
- *   │    │          │     Panel         │ ← var(--panel-height)
+ *   │    │          │     Panel         │ var(--panel-height)
  *   ├────┴──────────┴───────────────────┤
- *   │           StatusBar               │ ← 22px
+ *   │           StatusBar               │ 22px
  *   └──────────────────────────────────┘
- *
- * AB = ActivityBar (48px fixed)
- * Sidebar width and Panel height are user-resizable via drag handles.
  */
 export function Workbench(): React.JSX.Element {
   const [sidebarWidth, setSidebarWidth] = useState(240)
@@ -32,15 +28,16 @@ export function Workbench(): React.JSX.Element {
   const [panelVisible, setPanelVisible] = useState(true)
   const [activeView, setActiveView] = useState<string>('explorer')
 
+  // The currently open file path — passed down to EditorArea
+  const [openFilePath, setOpenFilePath] = useState<string | null>(null)
+
   // Drag-resize: sidebar width
-  const handleSidebarResize = useCallback((e: React.MouseEvent) => {
+  const handleSidebarResize = useCallback((e: React.MouseEvent): void => {
     e.preventDefault()
     const startX = e.clientX
     const startWidth = sidebarWidth
-
     const onMove = (me: MouseEvent): void => {
-      const delta = me.clientX - startX
-      setSidebarWidth(Math.max(120, Math.min(600, startWidth + delta)))
+      setSidebarWidth(Math.max(120, Math.min(600, startWidth + me.clientX - startX)))
     }
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
@@ -51,14 +48,12 @@ export function Workbench(): React.JSX.Element {
   }, [sidebarWidth])
 
   // Drag-resize: panel height
-  const handlePanelResize = useCallback((e: React.MouseEvent) => {
+  const handlePanelResize = useCallback((e: React.MouseEvent): void => {
     e.preventDefault()
     const startY = e.clientY
     const startHeight = panelHeight
-
     const onMove = (me: MouseEvent): void => {
-      const delta = startY - me.clientY
-      setPanelHeight(Math.max(80, Math.min(600, startHeight + delta)))
+      setPanelHeight(Math.max(80, Math.min(600, startHeight + startY - me.clientY)))
     }
     const onUp = (): void => {
       document.removeEventListener('mousemove', onMove)
@@ -91,8 +86,8 @@ export function Workbench(): React.JSX.Element {
           <Sidebar
             className="workbench__sidebar"
             activeView={activeView}
+            onOpenFile={setOpenFilePath}
           />
-          {/* Sidebar resize handle */}
           <div
             className="workbench__resize-handle workbench__resize-handle--sidebar"
             onMouseDown={handleSidebarResize}
@@ -101,11 +96,10 @@ export function Workbench(): React.JSX.Element {
       )}
 
       <div className="workbench__center">
-        <EditorArea className="workbench__editor" />
+        <EditorArea className="workbench__editor" openFilePath={openFilePath} />
 
         {panelVisible && (
           <>
-            {/* Panel resize handle */}
             <div
               className="workbench__resize-handle workbench__resize-handle--panel"
               onMouseDown={handlePanelResize}
@@ -115,7 +109,7 @@ export function Workbench(): React.JSX.Element {
         )}
       </div>
 
-      <StatusBar className="workbench__statusbar" />
+      <StatusBar className="workbench__statusbar" openFilePath={openFilePath} />
     </div>
   )
 }

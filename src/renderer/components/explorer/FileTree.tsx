@@ -1,0 +1,48 @@
+import React from 'react'
+import { useDirectoryChildren } from '../../store/workspace-store'
+import { FileTreeNode } from './FileTreeNode'
+import './FileTree.css'
+
+interface FileTreeProps {
+  dirPath: string
+  depth: number
+  onOpenFile: (path: string) => void
+}
+
+/**
+ * Renders the children of a directory.
+ * Called recursively by FileTreeNode when a directory is expanded.
+ */
+export function FileTree({ dirPath, depth, onOpenFile }: FileTreeProps): React.JSX.Element {
+  const { children, loading, reload } = useDirectoryChildren(dirPath)
+
+  if (loading && children.length === 0) {
+    return (
+      <div className="file-tree__loading" style={{ paddingLeft: depth * 12 + 8 }}>
+        Loading…
+      </div>
+    )
+  }
+
+  if (children.length === 0) {
+    return (
+      <div className="file-tree__empty" style={{ paddingLeft: depth * 12 + 8 }}>
+        (empty)
+      </div>
+    )
+  }
+
+  return (
+    <div className="file-tree">
+      {children.map(node => (
+        <FileTreeNode
+          key={node.path}
+          node={node}
+          depth={depth}
+          onOpenFile={onOpenFile}
+          onRefreshParent={reload}
+        />
+      ))}
+    </div>
+  )
+}

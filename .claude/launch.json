@@ -4,9 +4,9 @@
     {
       "name": "renderer",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["exec", "vite", "src/renderer"],
-      "port": 5175,
-      "autoPort": true
+      "runtimeArgs": ["exec", "vite", "--config", "vite.preview.config.ts"],
+      "autoPort": true,
+      "port": 5175
     }
   ]
 }
