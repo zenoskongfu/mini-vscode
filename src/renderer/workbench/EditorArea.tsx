@@ -1,11 +1,7 @@
 import React, { useCallback } from 'react'
-import {
-  useEditorState,
-  activateTab,
-  closeTab,
-  updateTabContent,
-  saveTab
-} from '../store/editor-store'
+import { useService } from '../platform/ServicesContext'
+import { useEvent } from '../platform/useEvent'
+import { IEditorService } from '../services/editor/editorService'
 import { EditorTabs } from '../components/editor/EditorTabs'
 import { Breadcrumbs } from '../components/editor/Breadcrumbs'
 import { MonacoEditor } from '../components/editor/MonacoEditor'
@@ -18,19 +14,25 @@ interface EditorAreaProps {
 
 /**
  * Editor area: tab strip + breadcrumbs + Monaco editor.
- * Reads open tabs from the editor store (TabService).
+ * Reads open tabs from IEditorService and re-renders on its events.
  */
 export function EditorArea({ className = '', onCursorChange }: EditorAreaProps): React.JSX.Element {
-  const { tabs, activePath } = useEditorState()
+  const editorService = useService(IEditorService)
+
+  const tabs = useEvent(editorService.onDidChangeTabs, () => editorService.tabs)
+  const activePath = useEvent(
+    editorService.onDidChangeActiveEditor,
+    () => editorService.activePath
+  )
   const activeTab = tabs.find(t => t.path === activePath) ?? null
 
   const handleChange = useCallback((value: string) => {
-    if (activePath) updateTabContent(activePath, value)
-  }, [activePath])
+    if (activePath) editorService.updateContent(activePath, value)
+  }, [editorService, activePath])
 
   const handleSave = useCallback(() => {
-    if (activePath) saveTab(activePath)
-  }, [activePath])
+    if (activePath) editorService.save(activePath)
+  }, [editorService, activePath])
 
   if (!activeTab) {
     return (
@@ -45,8 +47,8 @@ export function EditorArea({ className = '', onCursorChange }: EditorAreaProps):
       <EditorTabs
         tabs={tabs}
         activePath={activePath}
-        onActivate={activateTab}
-        onClose={closeTab}
+        onActivate={path => editorService.activate(path)}
+        onClose={path => editorService.close(path)}
       />
       <Breadcrumbs filePath={activeTab.path} />
       <MonacoEditor

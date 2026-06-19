@@ -1,5 +1,8 @@
 import React, { useCallback, useState } from 'react'
-import { useWorkspaceRoot, setWorkspaceRoot, useDirectoryChildren } from '../../store/workspace-store'
+import { useService } from '../../platform/ServicesContext'
+import { useEvent } from '../../platform/useEvent'
+import { IWorkspaceService } from '../../services/workspace/workspaceService'
+import { useDirectoryChildren } from './useDirectoryChildren'
 import { FileTree } from './FileTree'
 import './FileExplorer.css'
 
@@ -14,7 +17,8 @@ interface FileExplorerProps {
  * - Workspace open: shows workspace name + root file tree + action toolbar
  */
 export function FileExplorer({ onOpenFile }: FileExplorerProps): React.JSX.Element {
-  const root = useWorkspaceRoot()
+  const workspaceService = useService(IWorkspaceService)
+  const root = useEvent(workspaceService.onDidChangeRoot, () => workspaceService.root)
 
   if (!root) {
     return <NoWorkspace />
@@ -24,13 +28,10 @@ export function FileExplorer({ onOpenFile }: FileExplorerProps): React.JSX.Eleme
 }
 
 function NoWorkspace(): React.JSX.Element {
-  const handleOpen = useCallback(async () => {
-    const folderPath = await window.electronAPI.dialog.openFolder()
-    if (!folderPath) return
-    setWorkspaceRoot(folderPath)
-    // Start watching the folder for live updates
-    await window.electronAPI.fs.watchStart(folderPath)
-  }, [])
+  const workspaceService = useService(IWorkspaceService)
+  const handleOpen = useCallback(() => {
+    workspaceService.openFolder()
+  }, [workspaceService])
 
   return (
     <div className="file-explorer__no-workspace">
@@ -51,6 +52,7 @@ function WorkspaceView({
   root: string
   onOpenFile: (path: string) => void
 }): React.JSX.Element {
+  const workspaceService = useService(IWorkspaceService)
   const folderName = root.split('/').pop() ?? root
   const { reload } = useDirectoryChildren(root)
   const [creating, setCreating] = useState<'file' | 'folder' | null>(null)
@@ -95,10 +97,7 @@ function WorkspaceView({
           </ActionButton>
           <ActionButton
             title="Close Folder"
-            onClick={async () => {
-              await window.electronAPI.fs.watchStop(root)
-              setWorkspaceRoot(null)
-            }}
+            onClick={() => workspaceService.closeFolder()}
           >
             <CloseFolderIcon />
           </ActionButton>

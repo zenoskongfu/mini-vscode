@@ -1,5 +1,5 @@
 import React from 'react'
-import { useDirectoryChildren } from '../../store/workspace-store'
+import { useDirectoryChildren } from './useDirectoryChildren'
 import { FileTreeNode } from './FileTreeNode'
 import './FileTree.css'
 

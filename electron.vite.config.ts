@@ -25,9 +25,19 @@ export default defineConfig({
   },
   renderer: {
     resolve: {
+      dedupe: ['react', 'react-dom'],
       alias: {
         '@renderer': resolve(__dirname, 'src/renderer'),
         '@types': resolve(__dirname, 'src/types')
+      }
+    },
+    // Ensure esbuild honors legacy parameter decorators used by the DI container.
+    // (Vite may not follow tsconfig project references, so set it explicitly.)
+    esbuild: {
+      tsconfigRaw: {
+        compilerOptions: {
+          experimentalDecorators: true
+        }
       }
     },
     plugins: [react()],

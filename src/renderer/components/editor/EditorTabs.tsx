@@ -1,5 +1,5 @@
 import React from 'react'
-import type { EditorTab } from '../../store/editor-store'
+import type { EditorTab } from '../../services/editor/editorService'
 import './EditorTabs.css'
 
 interface EditorTabsProps {

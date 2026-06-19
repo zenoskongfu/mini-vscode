@@ -1,10 +1,12 @@
 import React from 'react'
-import { useEditorState } from '../store/editor-store'
+import { useService } from '../platform/ServicesContext'
+import { useEvent } from '../platform/useEvent'
+import { IEditorService } from '../services/editor/editorService'
+import { ILayoutService } from '../services/layout/layoutService'
 import './StatusBar.css'
 
 interface StatusBarProps {
   className?: string
-  cursor?: { line: number; column: number }
 }
 
 const EXT_LANGUAGE: Record<string, string> = {
@@ -16,13 +18,20 @@ const EXT_LANGUAGE: Record<string, string> = {
   sh: 'Shell', yml: 'YAML', yaml: 'YAML'
 }
 
-export function StatusBar({ className = '', cursor }: StatusBarProps): React.JSX.Element {
-  const { tabs, activePath } = useEditorState()
-  const activeTab = tabs.find(t => t.path === activePath) ?? null
+export function StatusBar({ className = '' }: StatusBarProps): React.JSX.Element {
+  const editorService = useService(IEditorService)
+  const layoutService = useService(ILayoutService)
 
-  const ext = activeTab?.path.split('.').pop()?.toLowerCase() ?? ''
+  const activePath = useEvent(
+    editorService.onDidChangeActiveEditor,
+    () => editorService.activePath
+  )
+  const cursor = useEvent(layoutService.onDidChangeCursor, () => layoutService.cursor)
+
+  const activeTab = editorService.activeTab
+  const ext = activePath?.split('.').pop()?.toLowerCase() ?? ''
   const language = activeTab ? (EXT_LANGUAGE[ext] ?? 'Plain Text') : 'TypeScript'
-  const lineCol = activeTab ? `Ln ${cursor?.line ?? 1}, Col ${cursor?.column ?? 1}` : 'Ln 1, Col 1'
+  const lineCol = activeTab ? `Ln ${cursor.line}, Col ${cursor.column}` : 'Ln 1, Col 1'
 
   return (
     <footer className={`status-bar ${className}`}>

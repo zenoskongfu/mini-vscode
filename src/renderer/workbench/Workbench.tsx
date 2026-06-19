@@ -1,119 +1,106 @@
-import React, { useState, useCallback } from 'react'
+import React, { useLayoutEffect, useState } from 'react'
+import { Allotment } from 'allotment'
+import 'allotment/dist/style.css'
 import { TitleBar } from './TitleBar'
 import { ActivityBar } from './ActivityBar'
 import { Sidebar } from './Sidebar'
 import { EditorArea } from './EditorArea'
 import { Panel } from './Panel'
 import { StatusBar } from './StatusBar'
-import { openFileInTab } from '../store/editor-store'
+import { useService } from '../platform/ServicesContext'
+import { useEvent } from '../platform/useEvent'
+import { ILayoutService, type ActivityView } from '../services/layout/layoutService'
+import { IEditorService } from '../services/editor/editorService'
 import './Workbench.css'
 
 /**
  * The main workbench shell.
  *
- * Layout (CSS Grid):
- *   ┌──────────────────────────────────┐
- *   │           TitleBar               │ 28px
- *   ├────┬──────────┬───────────────────┤
- *   │ AB │ Sidebar  │   EditorArea      │ flex: 1
- *   │    │          ├───────────────────┤
- *   │    │          │     Panel         │ var(--panel-height)
- *   ├────┴──────────┴───────────────────┤
- *   │           StatusBar               │ 22px
- *   └──────────────────────────────────┘
+ * Layout:
+ *   TitleBar                          (fixed top)
+ *   ┌────┬─────────────────────────┐
+ *   │ AB │  Allotment (horizontal) │  AB = ActivityBar (fixed 48px)
+ *   │    │  [Sidebar | center]     │  center = Allotment (vertical)
+ *   │    │            [Editor|Panel]│           [EditorArea | Panel]
+ *   └────┴─────────────────────────┘
+ *   StatusBar                         (fixed bottom)
+ *
+ * Pane sizes are managed by Allotment (drag the sashes). Visibility toggles
+ * collapse a pane via Allotment.Pane's `visible` prop.
  */
 export function Workbench(): React.JSX.Element {
-  const [sidebarWidth, setSidebarWidth] = useState(240)
-  const [panelHeight, setPanelHeight] = useState(220)
-  const [sidebarVisible, setSidebarVisible] = useState(true)
-  const [panelVisible, setPanelVisible] = useState(true)
-  const [activeView, setActiveView] = useState<string>('explorer')
+  const layoutService = useService(ILayoutService)
+  const editorService = useService(IEditorService)
 
-  // Cursor position reported by Monaco — shown in the status bar
-  const [cursor, setCursor] = useState({ line: 1, column: 1 })
+  const restoredSidebarVisible = useEvent(
+    layoutService.onDidChangeSidebarVisibility,
+    () => layoutService.sidebarVisible
+  )
+  const restoredPanelVisible = useEvent(
+    layoutService.onDidChangePanelVisibility,
+    () => layoutService.panelVisible
+  )
+  const activeView = useEvent(
+    layoutService.onDidChangeActiveView,
+    () => layoutService.activeView
+  )
 
-  // Drag-resize: sidebar width
-  const handleSidebarResize = useCallback((e: React.MouseEvent): void => {
-    e.preventDefault()
-    const startX = e.clientX
-    const startWidth = sidebarWidth
-    const onMove = (me: MouseEvent): void => {
-      setSidebarWidth(Math.max(120, Math.min(600, startWidth + me.clientX - startX)))
-    }
-    const onUp = (): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
-  }, [sidebarWidth])
-
-  // Drag-resize: panel height
-  const handlePanelResize = useCallback((e: React.MouseEvent): void => {
-    e.preventDefault()
-    const startY = e.clientY
-    const startHeight = panelHeight
-    const onMove = (me: MouseEvent): void => {
-      setPanelHeight(Math.max(80, Math.min(600, startHeight + startY - me.clientY)))
-    }
-    const onUp = (): void => {
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
-  }, [panelHeight])
+  // Allotment lays out correctly only when panes start visible, then toggle.
+  // So the first render keeps panes visible; a layout effect (pre-paint, no
+  // flash) flips `mounted`, after which restored/persisted visibility applies.
+  const [mounted, setMounted] = useState(false)
+  useLayoutEffect(() => setMounted(true), [])
+  const sidebarVisible = mounted ? restoredSidebarVisible : true
+  const panelVisible = mounted ? restoredPanelVisible : true
 
   return (
-    <div
-      className="workbench"
-      style={{
-        '--sidebar-width': sidebarVisible ? `${sidebarWidth}px` : '0px',
-        '--panel-height': panelVisible ? `${panelHeight}px` : '0px'
-      } as React.CSSProperties}
-    >
+    <div className="workbench">
       <TitleBar className="workbench__titlebar" />
 
-      <ActivityBar
-        className="workbench__activitybar"
-        activeView={activeView}
-        onViewChange={setActiveView}
-        onToggleSidebar={() => setSidebarVisible(v => !v)}
-        onTogglePanel={() => setPanelVisible(v => !v)}
-      />
-
-      {sidebarVisible && (
-        <>
-          <Sidebar
-            className="workbench__sidebar"
-            activeView={activeView}
-            onOpenFile={openFileInTab}
-          />
-          <div
-            className="workbench__resize-handle workbench__resize-handle--sidebar"
-            onMouseDown={handleSidebarResize}
-          />
-        </>
-      )}
-
-      <div className="workbench__center">
-        <EditorArea
-          className="workbench__editor"
-          onCursorChange={(line, column) => setCursor({ line, column })}
+      <div className="workbench__body">
+        <ActivityBar
+          className="workbench__activitybar"
+          activeView={activeView}
+          onViewChange={v => layoutService.setActiveView(v as ActivityView)}
+          onToggleSidebar={() => layoutService.toggleSidebar()}
+          onTogglePanel={() => layoutService.togglePanel()}
         />
 
-        {panelVisible && (
-          <>
-            <div
-              className="workbench__resize-handle workbench__resize-handle--panel"
-              onMouseDown={handlePanelResize}
+        {/* Horizontal split: Sidebar | center */}
+        <Allotment proportionalLayout={false} className="workbench__allotment">
+          <Allotment.Pane
+            preferredSize={240}
+            minSize={170}
+            maxSize={500}
+            visible={sidebarVisible}
+            snap
+          >
+            <Sidebar
+              className="workbench__sidebar"
+              activeView={activeView}
+              onOpenFile={path => editorService.openEditor(path)}
             />
-            <Panel className="workbench__panel" />
-          </>
-        )}
+          </Allotment.Pane>
+
+          <Allotment.Pane>
+            {/* Vertical split: EditorArea | Panel */}
+            <Allotment vertical proportionalLayout={false}>
+              <Allotment.Pane minSize={100}>
+                <EditorArea
+                  className="workbench__editor"
+                  onCursorChange={(line, column) => layoutService.setCursor({ line, column })}
+                />
+              </Allotment.Pane>
+
+              <Allotment.Pane preferredSize={220} minSize={80} visible={panelVisible} snap>
+                <Panel className="workbench__panel" />
+              </Allotment.Pane>
+            </Allotment>
+          </Allotment.Pane>
+        </Allotment>
       </div>
 
-      <StatusBar className="workbench__statusbar" cursor={cursor} />
+      <StatusBar className="workbench__statusbar" />
     </div>
   )
 }

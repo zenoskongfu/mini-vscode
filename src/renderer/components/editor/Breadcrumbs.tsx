@@ -1,5 +1,7 @@
 import React from 'react'
-import { getWorkspaceRoot } from '../../store/workspace-store'
+import { useService } from '../../platform/ServicesContext'
+import { useEvent } from '../../platform/useEvent'
+import { IWorkspaceService } from '../../services/workspace/workspaceService'
 import './Breadcrumbs.css'
 
 interface BreadcrumbsProps {
@@ -11,7 +13,8 @@ interface BreadcrumbsProps {
  * Shows the file path relative to the workspace root, segment by segment.
  */
 export function Breadcrumbs({ filePath }: BreadcrumbsProps): React.JSX.Element {
-  const root = getWorkspaceRoot()
+  const workspaceService = useService(IWorkspaceService)
+  const root = useEvent(workspaceService.onDidChangeRoot, () => workspaceService.root)
 
   // Display path relative to workspace root when possible
   let relative = filePath
