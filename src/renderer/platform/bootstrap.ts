@@ -8,6 +8,9 @@ import '../services/storage/storageService'
 import '../services/workspace/workspaceService'
 import '../services/editor/editorService'
 import '../services/layout/layoutService'
+import '../services/commands/commandService'
+import '../services/keybinding/keybindingService'
+import '../services/quickinput/quickInputService'
 
 /**
  * Build the root InstantiationService from all registered singletons.
