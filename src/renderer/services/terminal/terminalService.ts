@@ -1,6 +1,7 @@
 import { createDecorator } from '../../instantiation/instantiation'
 import { registerSingleton } from '../../instantiation/extensions'
 import { Emitter, Event } from '../../base/event'
+import { IWorkspaceService } from '../workspace/workspaceService'
 
 export interface ITerminalInstance {
   id: string
@@ -50,7 +51,7 @@ export class TerminalService implements ITerminalService {
   private readonly _onDidChangeTerminals = new Emitter<void>()
   readonly onDidChangeTerminals = this._onDidChangeTerminals.event
 
-  constructor() {
+  constructor(@IWorkspaceService private readonly workspaceService: IWorkspaceService) {
     // Single IPC subscription, fanned out by id
     window.electronAPI.terminal.onData((id, data) => {
       this._dataSinks.get(id)?.(data)
@@ -68,6 +69,12 @@ export class TerminalService implements ITerminalService {
     return this._activeId
   }
 
+  /**
+   * Create a terminal.
+   * @param cwd Explicit override. When omitted, the default-cwd policy applies:
+   *   explicit cwd ?? workspace root ?? (main process falls back to home dir).
+   *   Owning this policy here means no call site can forget it.
+   */
   createTerminal(cwd?: string): ITerminalInstance {
     const n = ++seq
     const id = `term-${n}`
@@ -75,7 +82,8 @@ export class TerminalService implements ITerminalService {
     const instance: ITerminalInstance = { id, title: `bash ${n}` }
     this._terminals = [...this._terminals, instance]
     this._activeId = id
-    window.electronAPI.terminal.create(id, cwd ?? '')
+    const dir = cwd ?? this.workspaceService.root ?? ''
+    window.electronAPI.terminal.create(id, dir)
     this._onDidChangeTerminals.fire()
     return instance
   }
