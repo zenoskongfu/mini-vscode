@@ -27,6 +27,7 @@ export interface ElectronAPI {
     resize: (id: string, cols: number, rows: number) => Promise<void>
     kill: (id: string) => Promise<void>
     onData: (cb: (id: string, data: string) => void) => () => void
+    onExit: (cb: (id: string, exitCode: number) => void) => () => void
   }
   git: {
     status: (cwd: string) => Promise<unknown>

@@ -47,8 +47,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('terminal:resize', id, cols, rows),
     kill: (id: string) => ipcRenderer.invoke('terminal:kill', id),
     onData: (cb: (id: string, data: string) => void) => {
-      ipcRenderer.on('terminal:data', (_, id, data) => cb(id, data))
-      return () => ipcRenderer.removeAllListeners('terminal:data')
+      const listener = (_: unknown, id: string, data: string): void => cb(id, data)
+      ipcRenderer.on('terminal:data', listener as never)
+      return () => ipcRenderer.removeListener('terminal:data', listener as never)
+    },
+    onExit: (cb: (id: string, exitCode: number) => void) => {
+      const listener = (_: unknown, id: string, code: number): void => cb(id, code)
+      ipcRenderer.on('terminal:exit', listener as never)
+      return () => ipcRenderer.removeListener('terminal:exit', listener as never)
     }
   },
 

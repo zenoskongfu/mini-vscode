@@ -19,7 +19,14 @@ export default defineConfig({
   },
   // Pre-bundle allotment together with React so they share one instance
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react/jsx-runtime', 'allotment']
+    include: [
+      'react',
+      'react-dom',
+      'react/jsx-runtime',
+      'allotment',
+      '@xterm/xterm',
+      '@xterm/addon-fit'
+    ]
   },
   // Match the Electron renderer build: enable legacy parameter decorators for DI
   esbuild: {

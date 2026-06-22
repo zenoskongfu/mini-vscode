@@ -1,0 +1,16 @@
+.terminal-view {
+  width: 100%;
+  height: 100%;
+  padding: 4px 8px;
+  background: var(--color-bg-panel);
+  overflow: hidden;
+}
+
+/* Let xterm's viewport fill the container */
+.terminal-view .xterm {
+  height: 100%;
+}
+
+.terminal-view .xterm-viewport {
+  overflow-y: auto;
+}

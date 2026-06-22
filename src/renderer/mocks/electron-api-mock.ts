@@ -7,6 +7,49 @@
 const noop = (): Promise<void> => Promise.resolve()
 const noopCleanup = (): (() => void) => () => undefined
 
+/**
+ * A fake terminal that echoes typed input back (with a prompt + line editing),
+ * so the xterm UI is verifiable in the browser preview without a real pty.
+ */
+function createTerminalEchoMock(): Window['electronAPI']['terminal'] {
+  const dataCbs = new Set<(id: string, data: string) => void>()
+  const lineBuf = new Map<string, string>()
+  const PROMPT = '\x1b[32mpreview\x1b[0m$ '
+
+  const emit = (id: string, data: string): void => dataCbs.forEach(cb => cb(id, data))
+
+  return {
+    create: (id: string) => {
+      lineBuf.set(id, '')
+      setTimeout(() => emit(id, `Mini VSCode preview terminal (echo mock)\r\n${PROMPT}`), 0)
+      return Promise.resolve()
+    },
+    input: (id: string, data: string) => {
+      let line = lineBuf.get(id) ?? ''
+      for (const ch of data) {
+        if (ch === '\r') {
+          emit(id, `\r\n${line ? `you typed: ${line}` : ''}${line ? '\r\n' : ''}${PROMPT}`)
+          line = ''
+        } else if (ch === '\x7f') {
+          if (line.length > 0) { line = line.slice(0, -1); emit(id, '\b \b') }
+        } else {
+          line += ch
+          emit(id, ch) // echo
+        }
+      }
+      lineBuf.set(id, line)
+      return Promise.resolve()
+    },
+    resize: noop,
+    kill: (id: string) => { lineBuf.delete(id); return Promise.resolve() },
+    onData: (cb: (id: string, data: string) => void) => {
+      dataCbs.add(cb)
+      return () => dataCbs.delete(cb)
+    },
+    onExit: noopCleanup
+  }
+}
+
 // A tiny fake workspace so the browser preview can exercise the Explorer + editor.
 const FAKE_ROOT = '/preview/mini-vscode'
 const FAKE_FILES: Record<string, string> = {
@@ -50,13 +93,7 @@ export function injectElectronAPIMock(): void {
       watchStop: noop,
       onChange: noopCleanup
     },
-    terminal: {
-      create: noop,
-      input: noop,
-      resize: noop,
-      kill: noop,
-      onData: noopCleanup
-    },
+    terminal: createTerminalEchoMock(),
     git: {
       status: () => Promise.resolve({}),
       diff: () => Promise.resolve(''),

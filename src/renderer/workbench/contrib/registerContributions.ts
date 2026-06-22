@@ -5,6 +5,7 @@ import { IQuickInputService } from '../../services/quickinput/quickInputService'
 import { ILayoutService, type ActivityView } from '../../services/layout/layoutService'
 import { IWorkspaceService } from '../../services/workspace/workspaceService'
 import { IEditorService } from '../../services/editor/editorService'
+import { ITerminalService } from '../../services/terminal/terminalService'
 
 /**
  * Register the built-in commands + their default keybindings.
@@ -20,6 +21,7 @@ export function registerWorkbenchContributions(insta: IInstantiationService): vo
   const layoutService = insta.get(ILayoutService)
   const workspaceService = insta.get(IWorkspaceService)
   const editorService = insta.get(IEditorService)
+  const terminalService = insta.get(ITerminalService)
 
   const register = (
     id: string,
@@ -94,5 +96,40 @@ export function registerWorkbenchContributions(insta: IInstantiationService): vo
     'Close Folder',
     'File',
     () => workspaceService.closeFolder()
+  )
+
+  // ── Terminal ──
+  // Note: our keybinding scheme normalizes Ctrl/Cmd to "mod", so this is
+  // Cmd+` on macOS (VSCode uses Ctrl+` on all platforms — a deliberate simplification).
+  register(
+    'workbench.action.terminal.toggle',
+    'Toggle Terminal',
+    'Terminal',
+    () => {
+      if (layoutService.panelVisible) {
+        layoutService.setPanelVisible(false)
+      } else {
+        layoutService.setPanelVisible(true)
+        if (terminalService.terminals.length === 0) terminalService.createTerminal()
+      }
+    },
+    'mod+`'
+  )
+  register(
+    'workbench.action.terminal.new',
+    'Create New Terminal',
+    'Terminal',
+    () => {
+      layoutService.setPanelVisible(true)
+      terminalService.createTerminal()
+    }
+  )
+  register(
+    'workbench.action.terminal.kill',
+    'Kill the Active Terminal',
+    'Terminal',
+    () => {
+      if (terminalService.activeId) terminalService.closeTerminal(terminalService.activeId)
+    }
   )
 }

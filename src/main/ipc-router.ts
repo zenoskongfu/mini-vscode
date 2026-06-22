@@ -1,6 +1,7 @@
 import { ipcMain, dialog } from 'electron'
 import { WindowManager } from './window-manager'
 import { FileSystemService } from './services/file-system-service'
+import { TerminalService } from './services/terminal-service'
 
 export const IPC_CHANNELS = {
   FS_READ_DIR: 'fs:readDir',
@@ -37,6 +38,7 @@ export const IPC_CHANNELS = {
 
 export class IPCRouter {
   private fsService = new FileSystemService()
+  private terminalService = new TerminalService()
 
   constructor(private windowManager: WindowManager) {}
 
@@ -44,6 +46,23 @@ export class IPCRouter {
     this.registerWindowHandlers()
     this.registerFSHandlers()
     this.registerDialogHandlers()
+    this.registerTerminalHandlers()
+  }
+
+  private registerTerminalHandlers(): void {
+    ipcMain.handle(IPC_CHANNELS.TERMINAL_CREATE, (_e, id: string, cwd: string) => {
+      const win = this.windowManager.getMainWindow()
+      if (win) this.terminalService.create(id, cwd, win)
+    })
+    ipcMain.handle(IPC_CHANNELS.TERMINAL_INPUT, (_e, id: string, data: string) => {
+      this.terminalService.write(id, data)
+    })
+    ipcMain.handle(IPC_CHANNELS.TERMINAL_RESIZE, (_e, id: string, cols: number, rows: number) => {
+      this.terminalService.resize(id, cols, rows)
+    })
+    ipcMain.handle(IPC_CHANNELS.TERMINAL_KILL, (_e, id: string) => {
+      this.terminalService.kill(id)
+    })
   }
 
   private registerWindowHandlers(): void {
