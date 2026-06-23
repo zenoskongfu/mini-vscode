@@ -1,4 +1,7 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { useService } from '../platform/ServicesContext'
+import { ICommandService } from '../services/commands/commandService'
+import { ContextMenu, type ContextMenuEntry } from '../components/context-menu/ContextMenu'
 import './ActivityBar.css'
 
 interface ActivityBarProps {
@@ -36,6 +39,9 @@ export function ActivityBar({
     { id: 'extensions', title: 'Extensions (Ctrl+Shift+X)', icon: <ExtensionsIcon /> },
   ]
 
+  const commandService = useService(ICommandService)
+  const [manageMenu, setManageMenu] = useState<{ x: number; y: number } | null>(null)
+
   const handleViewClick = (id: string): void => {
     if (id === activeView) {
       onToggleSidebar()
@@ -43,6 +49,20 @@ export function ActivityBar({
       onViewChange(id)
     }
   }
+
+  // Manage gear (bottom) opens a menu of commands — VSCode's gear is a menu, not
+  // a direct action. Each item just dispatches a command id.
+  const openManageMenu = (e: React.MouseEvent<HTMLButtonElement>): void => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setManageMenu({ x: rect.right + 2, y: rect.top })
+  }
+
+  const manageItems: ContextMenuEntry[] = [
+    { label: 'Command Palette…', onClick: () => commandService.executeCommand('workbench.action.showCommands') },
+    { separator: true },
+    { label: 'Settings (JSON)', onClick: () => commandService.executeCommand('workbench.action.openSettingsJson') },
+    { label: 'Color Theme', onClick: () => commandService.executeCommand('workbench.action.selectTheme') }
+  ]
 
   return (
     <aside className={`activity-bar ${className}`}>
@@ -73,13 +93,22 @@ export function ActivityBar({
           <TerminalIcon />
         </button>
         <button
-          className={`activity-bar__item ${activeView === 'settings' ? 'activity-bar__item--active' : ''}`}
-          title="Settings"
-          onClick={() => handleViewClick('settings')}
+          className={`activity-bar__item ${manageMenu ? 'activity-bar__item--active' : ''}`}
+          title="Manage"
+          onClick={openManageMenu}
         >
           <SettingsIcon />
         </button>
       </div>
+
+      {manageMenu && (
+        <ContextMenu
+          x={manageMenu.x}
+          y={manageMenu.y}
+          items={manageItems}
+          onClose={() => setManageMenu(null)}
+        />
+      )}
     </aside>
   )
 }

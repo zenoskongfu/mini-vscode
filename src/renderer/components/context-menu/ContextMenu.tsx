@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import './ContextMenu.css'
 
 export interface ContextMenuItem {
@@ -29,6 +29,20 @@ interface ContextMenuProps {
  */
 export function ContextMenu({ x, y, items, onClose }: ContextMenuProps): React.JSX.Element {
   const menuRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ x, y })
+
+  // Clamp to the viewport after mount (measure real size, shift in if clipped).
+  useLayoutEffect(() => {
+    const el = menuRef.current
+    if (!el) return
+    const { width, height } = el.getBoundingClientRect()
+    const margin = 4
+    let nx = x
+    let ny = y
+    if (nx + width > window.innerWidth) nx = Math.max(margin, window.innerWidth - width - margin)
+    if (ny + height > window.innerHeight) ny = Math.max(margin, window.innerHeight - height - margin)
+    setPos({ x: nx, y: ny })
+  }, [x, y])
 
   // Close on outside click or Escape
   useEffect(() => {
@@ -48,11 +62,10 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps): React.J
     }
   }, [onClose])
 
-  // Clamp position after mount so menu stays within viewport
   const style: React.CSSProperties = {
     position: 'fixed',
-    left: x,
-    top: y,
+    left: pos.x,
+    top: pos.y,
     zIndex: 'var(--z-context-menu)' as unknown as number
   }
 
