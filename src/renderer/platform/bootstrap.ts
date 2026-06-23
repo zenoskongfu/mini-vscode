@@ -12,6 +12,8 @@ import '../services/commands/commandService'
 import '../services/keybinding/keybindingService'
 import '../services/quickinput/quickInputService'
 import '../services/terminal/terminalService'
+import '../services/configuration/configurationService'
+import '../services/theme/themeService'
 
 /**
  * Build the root InstantiationService from all registered singletons.

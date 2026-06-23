@@ -83,9 +83,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   config: {
     get: () => ipcRenderer.invoke('config:get'),
     set: (partial: unknown) => ipcRenderer.invoke('config:set', partial),
+    getPath: () => ipcRenderer.invoke('config:getPath'),
     onChange: (cb: (settings: unknown) => void) => {
-      ipcRenderer.on('config:onChange', (_, s) => cb(s))
-      return () => ipcRenderer.removeAllListeners('config:onChange')
+      const listener = (_: unknown, s: unknown): void => cb(s)
+      ipcRenderer.on('config:onChange', listener as never)
+      return () => ipcRenderer.removeListener('config:onChange', listener as never)
     }
   },
 

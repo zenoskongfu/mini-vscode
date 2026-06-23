@@ -2,6 +2,10 @@ import React, { useRef, useCallback } from 'react'
 import Editor, { type OnMount, type OnChange } from '@monaco-editor/react'
 import type { editor } from 'monaco-editor'
 import { getLanguageForPath } from '../../services/monaco-setup'
+import { useService } from '../../platform/ServicesContext'
+import { useEvent } from '../../platform/useEvent'
+import { IConfigurationService } from '../../services/configuration/configurationService'
+import { IThemeService } from '../../services/theme/themeService'
 import './MonacoEditor.css'
 
 interface MonacoEditorProps {
@@ -31,6 +35,19 @@ export function MonacoEditor({
   const valueRef = useRef(value)
   valueRef.current = value
 
+  // Editor options + theme come from configuration (live-updates on settings.json save)
+  const configurationService = useService(IConfigurationService)
+  const themeService = useService(IThemeService)
+  const fontSize = useEvent(
+    configurationService.onDidChangeConfiguration,
+    () => configurationService.getValue<number>('editor.fontSize', 13)
+  )
+  const minimap = useEvent(
+    configurationService.onDidChangeConfiguration,
+    () => configurationService.getValue<boolean>('editor.minimap.enabled', true)
+  )
+  const monacoTheme = useEvent(themeService.onDidChangeTheme, () => themeService.getMonacoBase())
+
   const handleMount: OnMount = useCallback((editorInstance, monaco) => {
     editorRef.current = editorInstance
 
@@ -56,14 +73,14 @@ export function MonacoEditor({
         path={path}
         language={getLanguageForPath(path)}
         value={value}
-        theme="vs-dark"
+        theme={monacoTheme}
         onMount={handleMount}
         onChange={handleChange}
         keepCurrentModel
         options={{
           fontFamily: 'var(--font-family-mono)',
-          fontSize: 13,
-          minimap: { enabled: true },
+          fontSize,
+          minimap: { enabled: minimap },
           scrollBeyondLastLine: false,
           smoothScrolling: true,
           cursorBlinking: 'smooth',

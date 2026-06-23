@@ -69,6 +69,32 @@ const FAKE_DIRS: Record<string, Array<{ name: string; path: string; isDirectory:
   ]
 }
 
+/**
+ * Stateful config mock — `set` merges + notifies onChange listeners, so theme
+ * toggling and live settings updates are verifiable in the browser preview.
+ */
+function createConfigMock(): Window['electronAPI']['config'] {
+  let settings: Record<string, unknown> = {
+    'workbench.colorTheme': 'Dark+',
+    'editor.fontSize': 13,
+    'editor.minimap.enabled': true
+  }
+  const cbs = new Set<(s: Record<string, unknown>) => void>()
+  return {
+    get: () => Promise.resolve(settings),
+    set: (partial: Record<string, unknown>) => {
+      settings = { ...settings, ...partial }
+      cbs.forEach(cb => cb(settings))
+      return Promise.resolve()
+    },
+    getPath: () => Promise.resolve('/preview/.mini-vscode/settings.json'),
+    onChange: (cb: (s: Record<string, unknown>) => void) => {
+      cbs.add(cb)
+      return () => cbs.delete(cb)
+    }
+  }
+}
+
 export function injectElectronAPIMock(): void {
   if (typeof window !== 'undefined' && window.electronAPI) return  // real preload present
 
@@ -106,11 +132,7 @@ export function injectElectronAPIMock(): void {
       find: () => Promise.resolve([]),
       cancel: noop
     },
-    config: {
-      get: () => Promise.resolve({}),
-      set: noop,
-      onChange: noopCleanup
-    },
+    config: createConfigMock(),
     dialog: {
       openFolder: () => Promise.resolve(FAKE_ROOT),
       openFile: () => Promise.resolve(null),

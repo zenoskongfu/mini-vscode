@@ -2,6 +2,7 @@ import { ipcMain, dialog } from 'electron'
 import { WindowManager } from './window-manager'
 import { FileSystemService } from './services/file-system-service'
 import { TerminalService } from './services/terminal-service'
+import { ConfigService } from './services/config-service'
 
 export const IPC_CHANNELS = {
   FS_READ_DIR: 'fs:readDir',
@@ -27,6 +28,7 @@ export const IPC_CHANNELS = {
   SEARCH_CANCEL: 'search:cancel',
   CONFIG_GET: 'config:get',
   CONFIG_SET: 'config:set',
+  CONFIG_GET_PATH: 'config:getPath',
   DIALOG_OPEN_FOLDER: 'dialog:openFolder',
   DIALOG_OPEN_FILE: 'dialog:openFile',
   DIALOG_SHOW_MESSAGE: 'dialog:showMessage',
@@ -39,6 +41,7 @@ export const IPC_CHANNELS = {
 export class IPCRouter {
   private fsService = new FileSystemService()
   private terminalService = new TerminalService()
+  private configService = new ConfigService()
 
   constructor(private windowManager: WindowManager) {}
 
@@ -47,6 +50,18 @@ export class IPCRouter {
     this.registerFSHandlers()
     this.registerDialogHandlers()
     this.registerTerminalHandlers()
+    this.registerConfigHandlers()
+  }
+
+  private registerConfigHandlers(): void {
+    const win = this.windowManager.getMainWindow()
+    if (win) this.configService.init(win)
+
+    ipcMain.handle(IPC_CHANNELS.CONFIG_GET, () => this.configService.get())
+    ipcMain.handle(IPC_CHANNELS.CONFIG_GET_PATH, () => this.configService.getPath())
+    ipcMain.handle(IPC_CHANNELS.CONFIG_SET, (_e, partial: Record<string, unknown>) =>
+      this.configService.set(partial)
+    )
   }
 
   private registerTerminalHandlers(): void {

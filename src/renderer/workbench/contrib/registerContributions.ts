@@ -6,6 +6,8 @@ import { ILayoutService, type ActivityView } from '../../services/layout/layoutS
 import { IWorkspaceService } from '../../services/workspace/workspaceService'
 import { IEditorService } from '../../services/editor/editorService'
 import { ITerminalService } from '../../services/terminal/terminalService'
+import { IConfigurationService } from '../../services/configuration/configurationService'
+import { IThemeService } from '../../services/theme/themeService'
 
 /**
  * Register the built-in commands + their default keybindings.
@@ -22,6 +24,8 @@ export function registerWorkbenchContributions(insta: IInstantiationService): vo
   const workspaceService = insta.get(IWorkspaceService)
   const editorService = insta.get(IEditorService)
   const terminalService = insta.get(ITerminalService)
+  const configurationService = insta.get(IConfigurationService)
+  const themeService = insta.get(IThemeService)
 
   const register = (
     id: string,
@@ -130,6 +134,27 @@ export function registerWorkbenchContributions(insta: IInstantiationService): vo
     'Terminal',
     () => {
       if (terminalService.activeId) terminalService.closeTerminal(terminalService.activeId)
+    }
+  )
+
+  // ── Preferences ──
+  register(
+    'workbench.action.openSettingsJson',
+    'Open Settings (JSON)',
+    'Preferences',
+    async () => {
+      const path = await configurationService.getSettingsPath()
+      editorService.openEditor(path)
+    },
+    'mod+,'
+  )
+  register(
+    'workbench.action.selectTheme',
+    'Toggle Color Theme (Dark / Light)',
+    'Preferences',
+    () => {
+      const next = themeService.current.type === 'dark' ? 'Light+' : 'Dark+'
+      configurationService.updateValue('workbench.colorTheme', next)
     }
   )
 }

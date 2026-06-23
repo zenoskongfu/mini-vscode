@@ -42,9 +42,10 @@ export interface ElectronAPI {
     cancel: () => Promise<void>
   }
   config: {
-    get: () => Promise<unknown>
-    set: (partial: unknown) => Promise<void>
-    onChange: (cb: (settings: unknown) => void) => () => void
+    get: () => Promise<Record<string, unknown>>
+    set: (partial: Record<string, unknown>) => Promise<void>
+    getPath: () => Promise<string>
+    onChange: (cb: (settings: Record<string, unknown>) => void) => () => void
   }
   dialog: {
     openFolder: () => Promise<string | null>
