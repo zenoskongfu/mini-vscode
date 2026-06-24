@@ -19,9 +19,12 @@ import { createVSCodeApi } from "./vscode-api";
  * builtin extensions dir, and lazily activates extensions on activationEvents.
  */
 
-// The api object is (re)assigned after the RPC channel is up; the require
-// intercept closes over this binding so extensions get the live api.
-let vscodeApi: Record<string, unknown> = {};
+// Per-extension `vscode` api objects. Each extension gets its own api bound to
+// its id (so command registrations are attributable to the owning extension).
+// `currentExtensionId` is set around an extension's module load + activate, so
+// the require('vscode') intercept can hand back that extension's api.
+const extensionApis = new Map<string, Record<string, unknown>>();
+let currentExtensionId: string | null = null;
 
 // Intercept `require('vscode')` — exactly how VSCode injects its API.
 const moduleLoad = (Module as unknown as { _load: (...a: unknown[]) => unknown })._load;
@@ -30,16 +33,35 @@ const moduleLoad = (Module as unknown as { _load: (...a: unknown[]) => unknown }
 	request: string,
 	...rest: unknown[]
 ): unknown {
-	if (request === "vscode") return vscodeApi;
+	if (request === "vscode") {
+		return (currentExtensionId && extensionApis.get(currentExtensionId)) || {};
+	}
 	return moduleLoad.call(this, request, ...rest);
 };
 
+/** What a successfully-activated extension keeps around (for future deactivate) */
+interface ActivationRecord {
+	module: { activate?: (ctx: unknown) => unknown; deactivate?: () => unknown } | undefined;
+	context: {
+		subscriptions: { dispose(): void }[];
+		extensionPath: string;
+		globalState: Map<string, unknown>;
+	};
+}
+
 class ExtHostExtensionService implements ExtHostExtensionServiceShape {
 	private _extensions: ExtensionDescription[] = [];
-	private readonly _activated = new Set<string>();
+	/** Successfully activated extensions → their module + context (replaces a bare Set) */
+	private readonly _activatedExtensions = new Map<string, ActivationRecord>();
+	/** In-flight activations, for re-entrancy protection only */
+	private readonly _activating = new Set<string>();
 	private _disabled = new Set<string>();
 
-	constructor(private readonly extensionsDir: string) {}
+	constructor(
+		private readonly extensionsDir: string,
+		private readonly rpc: RPCProtocol,
+		private readonly extHostCommands: ExtHostCommands
+	) {}
 
 	scan(): void {
 		this._extensions = [];
@@ -90,7 +112,12 @@ class ExtHostExtensionService implements ExtHostExtensionServiceShape {
 
 	async $activateByEvent(event: string): Promise<void> {
 		for (const ext of this._extensions) {
-			if (this._activated.has(ext.id) || this._disabled.has(ext.id)) continue;
+			if (
+				this._activatedExtensions.has(ext.id) ||
+				this._activating.has(ext.id) ||
+				this._disabled.has(ext.id)
+			)
+				continue;
 			if (ext.activationEvents.includes(event) || ext.activationEvents.includes("*")) {
 				await this._activate(ext);
 			}
@@ -98,22 +125,35 @@ class ExtHostExtensionService implements ExtHostExtensionServiceShape {
 	}
 
 	private async _activate(ext: ExtensionDescription): Promise<void> {
-		this._activated.add(ext.id); // mark first to avoid re-entrant double activation
-		if (!ext.main) return;
+		if (this._activatedExtensions.has(ext.id) || this._activating.has(ext.id)) return;
+		this._activating.add(ext.id); // re-entrancy guard while loading/activating
+		const context: ActivationRecord["context"] = {
+			subscriptions: [],
+			extensionPath: ext.extensionPath,
+			globalState: new Map<string, unknown>(),
+		};
+		let mod: ActivationRecord["module"];
 		try {
-			const req = createRequire(path.join(ext.extensionPath, "package.json"));
-			const mod = req(ext.main) as { activate?: (ctx: unknown) => unknown };
-			const context = {
-				subscriptions: [] as { dispose(): void }[],
-				extensionPath: ext.extensionPath,
-				globalState: new Map<string, unknown>(),
-			};
-			if (typeof mod.activate === "function") {
-				await mod.activate(context);
-				console.log(`[ExtHost] activated ${ext.id}`);
+			if (ext.main) {
+				// Bind a per-extension `vscode` api, then load the module: its
+				// top-level require('vscode') resolves to this extension's api.
+				extensionApis.set(ext.id, createVSCodeApi(this.rpc, this.extHostCommands, ext.id));
+				currentExtensionId = ext.id;
+				const req = createRequire(path.join(ext.extensionPath, "package.json"));
+				mod = req(ext.main) as ActivationRecord["module"];
+				if (typeof mod?.activate === "function") {
+					await mod.activate(context);
+					console.log(`[ExtHost] activated ${ext.id}`);
+				}
 			}
+			// Record only on success → a failed activation stays retryable.
+			this._activatedExtensions.set(ext.id, { module: mod, context });
 		} catch (e) {
 			console.error(`[ExtHost] activation failed: ${ext.id}`, e);
+			extensionApis.delete(ext.id);
+		} finally {
+			currentExtensionId = null;
+			this._activating.delete(ext.id);
 		}
 	}
 }
@@ -143,9 +183,8 @@ parentPort.once("message", (e) => {
 	const rpc = new RPCProtocol(protocol);
 
 	const extHostCommands = rpc.set(ExtHostContext.ExtHostCommands, new ExtHostCommands());
-	vscodeApi = createVSCodeApi(rpc, extHostCommands);
 
-	const extService = new ExtHostExtensionService(init.extensionsDir);
+	const extService = new ExtHostExtensionService(init.extensionsDir, rpc, extHostCommands);
 	rpc.set(ExtHostContext.ExtHostExtensionService, extService);
 	extService.scan();
 

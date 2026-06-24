@@ -10,7 +10,8 @@
     "preview": "electron-vite preview",
     "package": "electron-builder",
     "rebuild:native": "electron-rebuild -f -w @homebridge/node-pty-prebuilt-multiarch",
-    "postinstall": "electron-rebuild -f -w @homebridge/node-pty-prebuilt-multiarch"
+    "postinstall": "electron-rebuild -f -w @homebridge/node-pty-prebuilt-multiarch",
+    "tsc": "tsc --noEmit"
   },
   "dependencies": {
     "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
