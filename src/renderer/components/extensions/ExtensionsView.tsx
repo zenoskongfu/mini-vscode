@@ -66,6 +66,29 @@ function ExtensionItem({
     }
   }
 
+  // 状态化的中间态：操作进行中禁用按钮，徽标反映激活/失败
+  const pending =
+    busy ||
+    item.status === 'installing' ||
+    item.status === 'uninstalling' ||
+    item.status === 'activating'
+
+  const badge = (): { text: string; cls: string } => {
+    switch (item.status) {
+      case 'activating':
+        return { text: 'Activating…', cls: 'extension-item__badge--on' }
+      case 'active':
+        return { text: 'Active', cls: 'extension-item__badge--on' }
+      case 'failed':
+        return { text: 'Failed', cls: 'extension-item__badge--off' }
+      default:
+        return item.enabled
+          ? { text: 'Installed', cls: 'extension-item__badge--on' }
+          : { text: 'Disabled', cls: 'extension-item__badge--off' }
+    }
+  }
+  const b = badge()
+
   return (
     <div className={`extension-item ${!item.enabled && item.installed ? 'extension-item--disabled' : ''}`}>
       <div className="extension-item__icon">{item.displayName.charAt(0).toUpperCase()}</div>
@@ -79,26 +102,24 @@ function ExtensionItem({
           <div className="extension-item__meta">
             <span className="extension-item__publisher">{item.publisher}</span>
             {item.installed && (
-              <span className={`extension-item__badge ${item.enabled ? 'extension-item__badge--on' : 'extension-item__badge--off'}`}>
-                {item.enabled ? 'Installed' : 'Disabled'}
-              </span>
+              <span className={`extension-item__badge ${b.cls}`}>{b.text}</span>
             )}
           </div>
           <div className="extension-item__actions">
             {!item.installed ? (
-              <button className="extension-item__btn extension-item__btn--primary" disabled={busy}
+              <button className="extension-item__btn extension-item__btn--primary" disabled={pending}
                 onClick={() => run(() => service.install(item.id))}>
-                {busy ? '…' : 'Install'}
+                {item.status === 'installing' ? 'Installing…' : 'Install'}
               </button>
             ) : (
               <>
-                <button className="extension-item__btn" disabled={busy}
+                <button className="extension-item__btn" disabled={pending}
                   onClick={() => run(() => service.setEnabled(item.id, !item.enabled))}>
                   {item.enabled ? 'Disable' : 'Enable'}
                 </button>
-                <button className="extension-item__btn" disabled={busy}
+                <button className="extension-item__btn" disabled={pending}
                   onClick={() => run(() => service.uninstall(item.id))}>
-                  Uninstall
+                  {item.status === 'uninstalling' ? 'Uninstalling…' : 'Uninstall'}
                 </button>
               </>
             )}

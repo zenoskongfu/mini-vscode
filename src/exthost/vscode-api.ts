@@ -29,8 +29,13 @@ export function createVSCodeApi(
         extHostCommands.registerCommand(extensionId, id, handler)
         // 告诉 workbench：这个贡献命令现在已经有可调用的处理器
         mainCommands.$registerCommand(id)
-        // 本地清理；RPC 侧注销（$unregisterCommand）留到 12.1 实现
-        return { dispose: () => extHostCommands.unregister(id) }
+        // dispose 时双向清理：本地处理器 + 通知 workbench 移除命令
+        return {
+          dispose: () => {
+            extHostCommands.unregister(id)
+            mainCommands.$unregisterCommand(id)
+          }
+        }
       },
       executeCommand(id: string, ...args: unknown[]): Promise<unknown> {
         return mainCommands.$executeCommand(id, args)

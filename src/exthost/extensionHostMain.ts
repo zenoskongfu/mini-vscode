@@ -4,8 +4,12 @@ import path from "node:path";
 import { RPCProtocol, type IMessagePassingProtocol } from "../platform/rpc/rpcProtocol";
 import {
 	ExtHostContext,
+	MainContext,
 	type ExtensionDescription,
 	type ExtHostExtensionServiceShape,
+	type MainThreadCommandsShape,
+	type MainThreadExtensionServiceShape,
+	type MainThreadMessageShape,
 } from "../platform/rpc/proxyIdentifiers";
 import { ExtHostCommands } from "./extHostCommands";
 import { createVSCodeApi } from "./vscode-api";
@@ -57,11 +61,22 @@ class ExtHostExtensionService implements ExtHostExtensionServiceShape {
 	private readonly _activating = new Set<string>();
 	private _disabled = new Set<string>();
 
+	/** renderer 侧 MainThread* 代理（用于反注册命令 / 广播激活态 / 弹通知） */
+	private readonly _mainCommands: MainThreadCommandsShape;
+	private readonly _mainExtensions: MainThreadExtensionServiceShape;
+	private readonly _mainMessage: MainThreadMessageShape;
+
 	constructor(
 		private readonly extensionsDir: string,
 		private readonly rpc: RPCProtocol,
 		private readonly extHostCommands: ExtHostCommands
-	) {}
+	) {
+		this._mainCommands = rpc.getProxy<MainThreadCommandsShape>(MainContext.MainThreadCommands);
+		this._mainExtensions = rpc.getProxy<MainThreadExtensionServiceShape>(
+			MainContext.MainThreadExtensionService
+		);
+		this._mainMessage = rpc.getProxy<MainThreadMessageShape>(MainContext.MainThreadMessageService);
+	}
 
 	scan(): void {
 		this._extensions = [];
@@ -127,6 +142,7 @@ class ExtHostExtensionService implements ExtHostExtensionServiceShape {
 	private async _activate(ext: ExtensionDescription): Promise<void> {
 		if (this._activatedExtensions.has(ext.id) || this._activating.has(ext.id)) return;
 		this._activating.add(ext.id); // 加载/激活期间的重入保护
+		this._mainExtensions.$onDidChangeActivation(ext.id, "activating");
 		const context: ActivationRecord["context"] = {
 			subscriptions: [],
 			extensionPath: ext.extensionPath,
@@ -148,13 +164,63 @@ class ExtHostExtensionService implements ExtHostExtensionServiceShape {
 			}
 			// 只在成功后记录；激活失败的扩展仍可重试。
 			this._activatedExtensions.set(ext.id, { module: mod, context });
+			this._mainExtensions.$onDidChangeActivation(ext.id, "active");
 		} catch (e) {
 			console.error(`[ExtHost] activation failed: ${ext.id}`, e);
 			extensionApis.delete(ext.id);
+			this._mainExtensions.$onDidChangeActivation(ext.id, "failed");
+			const msg = e instanceof Error ? e.message : String(e);
+			this._mainMessage.$showMessage("error", `扩展 ${ext.id} 激活失败：${msg}`);
 		} finally {
 			currentExtensionId = null;
 			this._activating.delete(ext.id);
 		}
+	}
+
+	/**
+	 * 停用扩展：调 deactivate 钩子 → 逆序释放 subscriptions → 反注册其全部命令
+	 * （并通知 renderer 移除）→ 清理该扩展的模块缓存 → 遗忘激活记录。
+	 * 失败激活留下的零散状态也一并清理，使「再次安装」从干净状态开始。
+	 */
+	async $deactivate(id: string): Promise<void> {
+		const record = this._activatedExtensions.get(id);
+
+		// 1. deactivate 钩子
+		try {
+			await record?.module?.deactivate?.();
+		} catch (e) {
+			console.error(`[ExtHost] deactivate hook failed: ${id}`, e);
+		}
+
+		// 2. 逆序释放 context.subscriptions
+		if (record) {
+			for (const d of [...record.context.subscriptions].reverse()) {
+				try {
+					d.dispose();
+				} catch (e) {
+					console.error(`[ExtHost] subscription dispose failed: ${id}`, e);
+				}
+			}
+		}
+
+		// 3. 反注册该扩展注册的所有命令，并通知 renderer 移除
+		for (const cmdId of this.extHostCommands.unregisterByExtension(id)) {
+			this._mainCommands.$unregisterCommand(cmdId);
+		}
+
+		// 4. 清模块缓存（仅该扩展自身路径下的文件，不动外部依赖）
+		const prefix = record?.context.extensionPath ?? this._extensions.find((e) => e.id === id)?.extensionPath;
+		if (prefix) {
+			const cache = (Module as unknown as { _cache: Record<string, unknown> })._cache;
+			for (const key of Object.keys(cache)) {
+				if (key.startsWith(prefix)) delete cache[key];
+			}
+		}
+
+		// 5. 遗忘
+		extensionApis.delete(id);
+		this._activatedExtensions.delete(id);
+		if (record) console.log(`[ExtHost] deactivated ${id}`);
 	}
 }
 
