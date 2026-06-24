@@ -10,8 +10,8 @@ interface FileTreeProps {
 }
 
 /**
- * Renders the children of a directory.
- * Called recursively by FileTreeNode when a directory is expanded.
+ * 渲染某个目录的子节点。
+ * 当目录展开时，会由 FileTreeNode 递归调用。
  */
 export function FileTree({ dirPath, depth, onOpenFile }: FileTreeProps): React.JSX.Element {
   const { children, loading, reload } = useDirectoryChildren(dirPath)

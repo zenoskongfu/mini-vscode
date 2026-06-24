@@ -1,11 +1,11 @@
-/** A theme = a base kind + Monaco base + a map of CSS custom properties */
+/** 一个主题 = 基础明暗类型 + Monaco base + CSS 自定义属性映射 */
 export interface ThemeDefinition {
-  /** Stable id used in settings (workbench.colorTheme), e.g. "Dark+" */
+  /** 设置中使用的稳定 id（workbench.colorTheme），如 "Dark+" */
   id: string
   label: string
   type: 'dark' | 'light'
-  /** Monaco built-in base theme to pair with */
+  /** 配套使用的 Monaco 内置基础主题 */
   monacoBase: 'vs-dark' | 'vs'
-  /** CSS custom properties (full var name → value), applied to :root */
+  /** CSS 自定义属性（完整变量名 → 值），会应用到 :root */
   colors: Record<string, string>
 }

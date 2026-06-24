@@ -9,8 +9,8 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: resolve(__dirname, 'src/main/index.ts'),
-          // Extension host runs in a utilityProcess; built as a separate entry
-          // → out/main/extensionHost.js (forked by ExtensionHost.start()).
+          // 扩展宿主运行在 utilityProcess 中；作为独立入口构建
+          // → out/main/extensionHost.js（由 ExtensionHost.start() 拉起）。
           extensionHost: resolve(__dirname, 'src/exthost/extensionHostMain.ts')
         }
       }
@@ -34,10 +34,10 @@ export default defineConfig({
         '@types': resolve(__dirname, 'src/types')
       }
     },
-    // Ensure esbuild honors legacy parameter decorators used by the DI container.
-    // (Vite may not follow tsconfig project references, so set it explicitly.)
-    // Two separate esbuild passes need it: the transform pass (esbuild) AND the
-    // dependency pre-bundling scanner (optimizeDeps.esbuildOptions).
+    // 确保 esbuild 遵守 DI 容器使用的旧版参数装饰器语义。
+    // （Vite 不一定会跟随 tsconfig 的项目引用，所以这里显式指定。）
+    // 两段独立的 esbuild 流程都需要它：源码转换（esbuild）以及
+    // 依赖预打包扫描器（optimizeDeps.esbuildOptions）。
     esbuild: {
       tsconfigRaw: {
         compilerOptions: {

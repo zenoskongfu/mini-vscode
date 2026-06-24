@@ -40,7 +40,7 @@
 }
 
 .editor-tab--active::before {
-  /* top accent line on the active tab */
+  /* 当前活动标签页顶部强调线 */
   content: '';
   position: absolute;
   top: 0;
@@ -85,7 +85,7 @@
   opacity: 1;
 }
 
-/* keep dirty dot always visible */
+/* 始终显示 dirty 圆点 */
 .editor-tab__close--dirty {
   opacity: 1;
 }

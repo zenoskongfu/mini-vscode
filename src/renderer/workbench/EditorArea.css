@@ -7,7 +7,7 @@
   min-height: 0;
 }
 
-/* Tab strip (Phase 2 minimal — replaced by EditorTabs in Phase 3) */
+/* 标签栏（Phase 2 最小实现；Phase 3 中由 EditorTabs 替换） */
 .editor-area__tab-strip {
   display: flex;
   align-items: center;
@@ -51,7 +51,7 @@
   text-overflow: ellipsis;
 }
 
-/* Breadcrumb */
+/* 面包屑 */
 .editor-area__breadcrumb {
   display: flex;
   align-items: center;
@@ -81,7 +81,7 @@
   margin: 0 1px;
 }
 
-/* Content */
+/* 内容 */
 .editor-area__content {
   flex: 1;
   overflow: auto;
@@ -108,7 +108,7 @@
   color: var(--color-error);
 }
 
-/* Welcome screen */
+/* 欢迎页 */
 .welcome-screen {
   display: flex;
   flex-direction: column;

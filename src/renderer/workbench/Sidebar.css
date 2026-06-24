@@ -30,7 +30,7 @@
   overflow: auto;
 }
 
-/* Placeholder state */
+/* 占位状态 */
 .sidebar-placeholder {
   display: flex;
   flex-direction: column;

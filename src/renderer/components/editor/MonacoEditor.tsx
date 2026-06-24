@@ -17,11 +17,11 @@ interface MonacoEditorProps {
 }
 
 /**
- * Monaco editor wrapper.
+ * Monaco 编辑器包装层。
  *
- * Passing the `path` prop lets @monaco-editor/react maintain ONE model per file path —
- * switching tabs preserves each file's undo stack and view state (cursor, scroll),
- * mirroring how VSCode's EditorService keeps text models alive in the background.
+ * 传入 `path` prop 后，@monaco-editor/react 会为每个文件路径维护唯一 model，
+ * 切换标签页时可以保留每个文件的 undo 栈和视图状态（光标、滚动），
+ * 这模拟了 VSCode EditorService 在后台保持 text model 存活的方式。
  */
 export function MonacoEditor({
   path,
@@ -31,11 +31,11 @@ export function MonacoEditor({
   onCursorChange
 }: MonacoEditorProps): React.JSX.Element {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
-  // Keep latest value in a ref so the Cmd+S command always saves current content
+  // 用 ref 保存最新内容，确保 Cmd+S 总能保存当前内容
   const valueRef = useRef(value)
   valueRef.current = value
 
-  // Editor options + theme come from configuration (live-updates on settings.json save)
+  // 编辑器选项与主题来自配置（保存 settings.json 后实时更新）
   const configurationService = useService(IConfigurationService)
   const themeService = useService(IThemeService)
   const fontSize = useEvent(
@@ -51,13 +51,13 @@ export function MonacoEditor({
   const handleMount: OnMount = useCallback((editorInstance, monaco) => {
     editorRef.current = editorInstance
 
-    // Cmd/Ctrl+S → save
+    // Cmd/Ctrl+S → 保存
     editorInstance.addCommand(
       monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,
       () => onSave(valueRef.current)
     )
 
-    // Report cursor position to the status bar
+    // 将光标位置上报给状态栏
     editorInstance.onDidChangeCursorPosition(e => {
       onCursorChange?.(e.position.lineNumber, e.position.column)
     })

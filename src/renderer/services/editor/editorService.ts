@@ -2,24 +2,24 @@ import { createDecorator } from '../../instantiation/instantiation'
 import { registerSingleton } from '../../instantiation/extensions'
 import { Emitter, Event } from '../../base/event'
 
-/** A single open editor tab */
+/** 一个已打开的编辑器标签页 */
 export interface EditorTab {
   path: string
   name: string
-  /** Content as loaded from disk (the "saved" baseline) */
+  /** 从磁盘加载到的内容（“已保存”的基线） */
   savedContent: string
-  /** Live content currently in the editor (preserves unsaved edits across tabs) */
+  /** 编辑器里的当前实时内容（切换标签页时保留未保存修改） */
   content: string
-  /** true when content differs from savedContent */
+  /** 当 content 与 savedContent 不同时为 true */
   dirty: boolean
 }
 
 export interface IEditorService {
   readonly _serviceBrand: undefined
 
-  /** Fires when the tab list changes (open/close) or a tab's dirty state flips */
+  /** 标签页列表变化（打开/关闭）或 dirty 状态翻转时触发 */
   readonly onDidChangeTabs: Event<void>
-  /** Fires when the active editor changes */
+  /** 当前活动编辑器变化时触发 */
   readonly onDidChangeActiveEditor: Event<string | null>
 
   readonly tabs: readonly EditorTab[]
@@ -36,8 +36,9 @@ export interface IEditorService {
 export const IEditorService = createDecorator<IEditorService>('editorService')
 
 /**
- * EditorService — owns the open-tab list and active editor (VSCode IEditorService analog).
- * State lives in the class; views subscribe via onDidChangeTabs / onDidChangeActiveEditor.
+ * EditorService 持有已打开标签页列表与当前活动编辑器，
+ * 对应 VSCode 的 IEditorService。
+ * 状态位于 class 内部；视图通过 onDidChangeTabs / onDidChangeActiveEditor 订阅。
  */
 export class EditorService implements IEditorService {
   declare readonly _serviceBrand: undefined

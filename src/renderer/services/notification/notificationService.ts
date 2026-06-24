@@ -23,8 +23,8 @@ export const INotificationService = createDecorator<INotificationService>('notif
 let seq = 0
 
 /**
- * Minimal NotificationService (toast queue). Phase 9 will expand it; for now it
- * backs `vscode.window.showInformationMessage` from the extension host.
+ * 最小 NotificationService（toast 队列）。Phase 9 会继续扩展它；
+ * 当前它支撑扩展宿主中的 `vscode.window.showInformationMessage`。
  */
 export class NotificationService implements INotificationService {
   declare readonly _serviceBrand: undefined
@@ -41,7 +41,7 @@ export class NotificationService implements INotificationService {
     const n: INotification = { id: ++seq, severity, message }
     this._notifications = [...this._notifications, n]
     this._onDidChange.fire()
-    // auto-dismiss after 5s
+    // 5 秒后自动关闭
     setTimeout(() => this.dismiss(n.id), 5000)
   }
 

@@ -2,8 +2,8 @@ import { InstantiationService } from '../instantiation/instantiationService'
 import { ServiceCollection } from '../instantiation/serviceCollection'
 import { getSingletonServiceDescriptors } from '../instantiation/extensions'
 
-// Import service modules for their registerSingleton() side-effects.
-// (Each module registers itself into the singleton registry at import time.)
+// 导入服务模块以触发它们的 registerSingleton() 副作用。
+// （每个模块会在导入时把自己注册进单例注册表。）
 import '../services/storage/storageService'
 import '../services/workspace/workspaceService'
 import '../services/editor/editorService'
@@ -18,8 +18,8 @@ import '../services/notification/notificationService'
 import '../services/extensions/extensionService'
 
 /**
- * Build the root InstantiationService from all registered singletons.
- * Services are stored as lazy SyncDescriptors and instantiated on first get().
+ * 从所有已注册单例构建根 InstantiationService。
+ * 服务以懒加载 SyncDescriptor 保存，并在首次 get() 时实例化。
  */
 export function createInstantiationService(): InstantiationService {
   const collection = new ServiceCollection()

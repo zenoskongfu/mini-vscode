@@ -13,8 +13,8 @@ interface ScoredCommand {
 }
 
 /**
- * Command Palette overlay (Ctrl/Cmd+Shift+P).
- * Always mounted; visibility is driven by IQuickInputService.
+ * 命令面板覆盖层（Ctrl/Cmd+Shift+P）。
+ * 组件始终挂载；可见性由 IQuickInputService 驱动。
  */
 export function CommandPalette(): React.JSX.Element | null {
   const quickInput = useService(IQuickInputService)
@@ -28,17 +28,17 @@ export function CommandPalette(): React.JSX.Element | null {
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
-  // Reset query + focus when opened
+  // 打开时重置 query 并聚焦
   useEffect(() => {
     if (visible) {
       setQuery('')
       setSelected(0)
-      // focus after the element is shown
+      // 元素显示后再聚焦
       requestAnimationFrame(() => inputRef.current?.focus())
     }
   }, [visible])
 
-  // Filter + sort commands by fuzzy score
+  // 按模糊匹配分数过滤并排序命令
   const results = useMemo<ScoredCommand[]>(() => {
     const commands = commandService.getCommands()
     if (!query) {
@@ -56,12 +56,12 @@ export function CommandPalette(): React.JSX.Element | null {
     return scored.map(s => ({ command: s.command, indices: s.indices }))
   }, [query, commandService])
 
-  // Keep selection in range
+  // 保持选中项不越界
   useEffect(() => {
     setSelected(s => Math.min(s, Math.max(0, results.length - 1)))
   }, [results.length])
 
-  // Scroll selected item into view
+  // 将选中项滚动到可视区域
   useEffect(() => {
     const el = listRef.current?.children[selected] as HTMLElement | undefined
     el?.scrollIntoView({ block: 'nearest' })
@@ -119,7 +119,7 @@ export function CommandPalette(): React.JSX.Element | null {
                 )}
                 <Highlighted
                   text={item.command.title}
-                  // indices are over the full label (category: title); offset to title
+                  // 索引基于完整 label（category: title）；这里平移到 title
                   indices={shiftIndicesToTitle(item, item.command)}
                 />
               </span>
@@ -140,7 +140,7 @@ function label(command: ICommand): string {
   return command.category ? `${command.category}: ${command.title}` : command.title
 }
 
-/** Translate label-space match indices into title-space indices */
+/** 将 label 空间中的命中索引转换到 title 空间 */
 function shiftIndicesToTitle(item: ScoredCommand, command: ICommand): number[] {
   if (!command.category) return item.indices
   const offset = command.category.length + 2 // "category: "

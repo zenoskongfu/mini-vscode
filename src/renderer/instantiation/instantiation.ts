@@ -1,15 +1,15 @@
 /**
- * Dependency-injection core — a faithful, trimmed-down port of VSCode's
- * `vs/platform/instantiation/common/instantiation.ts`.
+ * 依赖注入核心：忠实但精简地移植 VSCode
+ * `vs/platform/instantiation/common/instantiation.ts`。
  *
- * A `ServiceIdentifier<T>` is simultaneously:
- *   1. a unique token used to register/look up a service, and
- *   2. a *parameter decorator* used in constructors:
+ * `ServiceIdentifier<T>` 同时是：
+ *   1. 注册/查找服务时使用的唯一 token
+ *   2. 构造函数中的参数装饰器：
  *        constructor(@IEditorService private editor: IEditorService) {}
  *
- * The decorator records `{ id, index }` onto the constructor's static metadata.
- * The InstantiationService later reads that metadata to inject dependencies —
- * NO `emitDecoratorMetadata` / reflect-metadata required (exactly like VSCode).
+ * 装饰器会把 `{ id, index }` 记录到构造函数的静态元数据上。
+ * InstantiationService 随后读取这些元数据来注入依赖，
+ * 无需 `emitDecoratorMetadata` / reflect-metadata（与 VSCode 一致）。
  */
 
 export namespace _util {
@@ -32,7 +32,7 @@ export interface ServiceIdentifier<T> {
   type: T
 }
 
-/** Record that constructor `target` needs service `id` at parameter `index` */
+/** 记录构造函数 `target` 的第 `index` 个参数需要服务 `id` */
 function storeServiceDependency(id: ServiceIdentifier<unknown>, target: object, index: number): void {
   const t = target as Record<string, unknown>
   if (t[_util.DI_TARGET] === target) {
@@ -44,8 +44,8 @@ function storeServiceDependency(id: ServiceIdentifier<unknown>, target: object, 
 }
 
 /**
- * Create a service identifier + parameter decorator under a unique string id.
- * Calling it twice with the same id returns the same identifier (idempotent).
+ * 用唯一字符串 id 创建服务标识符 + 参数装饰器。
+ * 使用同一个 id 重复调用会返回同一个标识符（幂等）。
  */
 export function createDecorator<T>(serviceId: string): ServiceIdentifier<T> {
   const existing = _util.serviceIds.get(serviceId)
@@ -64,10 +64,10 @@ export function createDecorator<T>(serviceId: string): ServiceIdentifier<T> {
   return id
 }
 
-/** Convenience type: maps a service identifier to its service interface */
+/** 便捷类型：把服务标识映射到对应服务接口 */
 export type GetLeadingNonServiceArgs<TArgs extends unknown[]> = TArgs
 
-/** The instantiation service itself is injectable */
+/** InstantiationService 本身也可以被注入 */
 export interface IInstantiationService {
   readonly _serviceBrand: undefined
   createInstance<T>(ctor: new (...args: never[]) => T, ...staticArgs: unknown[]): T

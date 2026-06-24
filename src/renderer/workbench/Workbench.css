@@ -1,5 +1,5 @@
 /* ============================================================
-   Workbench — flex shell + Allotment for resizable panes
+   Workbench：flex 外壳 + Allotment 可调整 pane
    ============================================================ */
 
 .workbench {
@@ -14,14 +14,14 @@
   flex-shrink: 0;
 }
 
-/* Body: ActivityBar (fixed) + Allotment (fills the rest) */
+/* 主体：ActivityBar（固定）+ Allotment（填满剩余区域） */
 .workbench__body {
   flex: 1;
   display: flex;
   min-height: 0;
   overflow: hidden;
 
-  /* Map Allotment's CSS vars to our palette */
+  /* 将 Allotment 的 CSS 变量映射到我们的调色板 */
   --focus-border: var(--color-accent);
   --separator-border: var(--color-border);
 }
@@ -39,7 +39,7 @@
   flex-shrink: 0;
 }
 
-/* Each pane fills its Allotment cell */
+/* 每个 pane 填满自己的 Allotment 单元格 */
 .workbench__sidebar,
 .workbench__editor,
 .workbench__panel {

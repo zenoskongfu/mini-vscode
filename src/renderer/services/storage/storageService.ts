@@ -3,8 +3,8 @@ import { registerSingleton } from '../../instantiation/extensions'
 import { Emitter, Event } from '../../base/event'
 
 /**
- * Storage scope — mirrors VSCode's StorageScope.
- * GLOBAL persists across all workspaces; WORKSPACE is per opened folder.
+ * 存储作用域：对应 VSCode 的 StorageScope。
+ * GLOBAL 跨所有工作区持久化；WORKSPACE 针对当前打开文件夹。
  */
 export const enum StorageScope {
   GLOBAL = 'global',
@@ -27,8 +27,8 @@ export interface IStorageService {
 export const IStorageService = createDecorator<IStorageService>('storageService')
 
 /**
- * localStorage-backed implementation (memento pattern).
- * Keys are namespaced by scope so GLOBAL and WORKSPACE never collide.
+ * 基于 localStorage 的实现（memento 模式）。
+ * key 会按作用域加命名空间，确保 GLOBAL 与 WORKSPACE 不会冲突。
  */
 export class StorageService implements IStorageService {
   declare readonly _serviceBrand: undefined

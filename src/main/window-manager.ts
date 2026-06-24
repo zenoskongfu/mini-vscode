@@ -10,11 +10,11 @@ export class WindowManager {
       height: 800,
       minWidth: 600,
       minHeight: 400,
-      // Frameless window: we draw our own title bar in the renderer
+      // 无边框窗口：标题栏由 renderer 自己绘制
       titleBarStyle: 'hidden',
-      // macOS: show traffic light buttons at correct position
+      // macOS：把红黄绿窗口按钮放在正确位置
       trafficLightPosition: { x: 16, y: 10 },
-      // Keep native title bar on macOS but overlay the content
+      // macOS 保留原生标题栏，同时让内容覆盖到标题栏区域
       ...(process.platform !== 'darwin' && { frame: false }),
       backgroundColor: '#1e1e1e',
       show: false,
@@ -26,18 +26,18 @@ export class WindowManager {
       }
     })
 
-    // Show window once ready to avoid white flash
+    // 窗口准备好后再显示，避免白屏闪烁
     this.mainWindow.on('ready-to-show', () => {
       this.mainWindow?.show()
     })
 
-    // Open external links in default browser
+    // 外部链接交给系统默认浏览器打开
     this.mainWindow.webContents.setWindowOpenHandler(({ url }) => {
       shell.openExternal(url)
       return { action: 'deny' }
     })
 
-    // Load the renderer
+    // 加载 renderer 页面
     if (process.env.ELECTRON_RENDERER_URL) {
       this.mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
     } else {

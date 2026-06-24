@@ -39,7 +39,7 @@
   font-size: var(--font-size-small);
 }
 
-/* ── Extension item ── */
+/* ── 扩展项 ── */
 .extension-item {
   display: flex;
   gap: 8px;

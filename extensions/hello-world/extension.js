@@ -1,5 +1,5 @@
-// A minimal mini-vscode extension (CommonJS, like a real VSCode extension).
-// `require('vscode')` is intercepted by the extension host.
+// 一个最小的 mini-vscode 扩展（CommonJS，模拟真实 VSCode 扩展）。
+// `require('vscode')` 会被扩展宿主拦截。
 const vscode = require('vscode')
 
 function activate(context) {

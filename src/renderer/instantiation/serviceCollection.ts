@@ -2,8 +2,8 @@ import { ServiceIdentifier } from './instantiation'
 import { SyncDescriptor } from './descriptors'
 
 /**
- * A map of service id → instance OR SyncDescriptor (not yet instantiated).
- * Mirrors VSCode's `vs/platform/instantiation/common/serviceCollection.ts`.
+ * service id → 实例或尚未实例化的 SyncDescriptor 的映射。
+ * 对应 VSCode 的 `vs/platform/instantiation/common/serviceCollection.ts`。
  */
 export class ServiceCollection {
   private _entries = new Map<ServiceIdentifier<unknown>, unknown>()

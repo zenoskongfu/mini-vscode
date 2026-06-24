@@ -6,9 +6,9 @@ import { fuzzyMatch } from '../../base/fuzzy'
 import './ExtensionsView.css'
 
 /**
- * Extensions sidebar view — VSCode's Extensions panel, simplified.
- * Lists the local "gallery" merged with installed/enabled state and supports
- * search + install / uninstall / enable / disable.
+ * Extensions 侧边栏视图：VSCode Extensions 面板的简化版。
+ * 展示本地 “gallery” 与已安装/已启用状态的合并结果，
+ * 并支持搜索、安装、卸载、启用和禁用。
  */
 export function ExtensionsView(): React.JSX.Element {
   const extensionService = useService(IExtensionService)

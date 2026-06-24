@@ -24,14 +24,14 @@ interface ContextMenuProps {
 }
 
 /**
- * Portal-positioned context menu.
- * Clamps to viewport so it never clips off-screen.
+ * 通过 portal 定位的上下文菜单。
+ * 会夹取到视口范围内，避免菜单跑到屏幕外。
  */
 export function ContextMenu({ x, y, items, onClose }: ContextMenuProps): React.JSX.Element {
   const menuRef = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState({ x, y })
 
-  // Clamp to the viewport after mount (measure real size, shift in if clipped).
+  // 挂载后夹取到视口内（测量真实尺寸，被裁切时向内平移）。
   useLayoutEffect(() => {
     const el = menuRef.current
     if (!el) return
@@ -44,7 +44,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps): React.J
     setPos({ x: nx, y: ny })
   }, [x, y])
 
-  // Close on outside click or Escape
+  // 点击外部或按 Escape 时关闭
   useEffect(() => {
     const handleClick = (e: MouseEvent): void => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {

@@ -35,13 +35,13 @@ export function StatusBar({ className = '' }: StatusBarProps): React.JSX.Element
 
   return (
     <footer className={`status-bar ${className}`}>
-      {/* Left section */}
+      {/* 左侧区域 */}
       <div className="status-bar__section status-bar__section--left">
         <StatusItem icon={<BranchIcon />} text="main" title="Git branch" />
         <StatusItem icon={<SyncIcon />} text="0↓ 0↑" title="Git sync" />
       </div>
 
-      {/* Right section */}
+      {/* 右侧区域 */}
       <div className="status-bar__section status-bar__section--right">
         {activeTab && <StatusItem text={lineCol} title="Go to Line/Column" />}
         <StatusItem text="UTF-8" title="File encoding" />
@@ -70,7 +70,7 @@ function StatusItem({
   )
 }
 
-/* ── Inline SVG icons ── */
+/* ── 内联 SVG 图标 ── */
 
 function BranchIcon(): React.JSX.Element {
   return (

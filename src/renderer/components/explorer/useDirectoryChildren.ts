@@ -2,11 +2,10 @@ import { useState, useEffect, useCallback } from 'react'
 import type { FileNode, FileChangeEvent } from '../../types/file-tree'
 
 /**
- * Loads the children of a directory on demand and keeps them fresh by
- * listening to fs:onChange events that affect this directory.
+ * 按需加载某个目录的子节点，并通过监听影响该目录的 fs:onChange 事件保持新鲜。
  *
- * Pure view-helper hook — talks to window.electronAPI.fs directly, independent
- * of any service (the Explorer tree calls it recursively per expanded folder).
+ * 这是纯视图辅助 hook，直接调用 window.electronAPI.fs，独立于任何服务；
+ * Explorer 树会针对每个展开的文件夹递归调用它。
  */
 export function useDirectoryChildren(dirPath: string | null): {
   children: FileNode[]
@@ -36,7 +35,7 @@ export function useDirectoryChildren(dirPath: string | null): {
     load()
   }, [load])
 
-  // Re-fetch when a change occurs directly inside this directory
+  // 当变化直接发生在当前目录内时重新拉取
   useEffect(() => {
     if (!dirPath) return
     const cleanup = window.electronAPI.fs.onChange((event: unknown) => {

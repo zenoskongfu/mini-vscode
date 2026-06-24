@@ -11,10 +11,10 @@ interface FileExplorerProps {
 }
 
 /**
- * The Explorer sidebar panel.
+ * Explorer 侧边栏面板。
  *
- * - No workspace: shows "Open Folder" button
- * - Workspace open: shows workspace name + root file tree + action toolbar
+ * - 未打开工作区：显示 “Open Folder” 按钮
+ * - 已打开工作区：显示工作区名、根文件树和操作工具栏
  */
 export function FileExplorer({ onOpenFile }: FileExplorerProps): React.JSX.Element {
   const workspaceService = useService(IWorkspaceService)
@@ -74,7 +74,7 @@ function WorkspaceView({
 
   return (
     <div className="file-explorer">
-      {/* Workspace header */}
+      {/* 工作区标题 */}
       <div className="file-explorer__workspace-header">
         <span className="file-explorer__workspace-name" title={root}>
           {folderName.toUpperCase()}
@@ -104,7 +104,7 @@ function WorkspaceView({
         </div>
       </div>
 
-      {/* Inline new-file/folder input at root level */}
+      {/* 根层级的内联新建文件/文件夹输入框 */}
       {creating && (
         <div className="file-explorer__inline-create">
           <input
@@ -122,7 +122,7 @@ function WorkspaceView({
         </div>
       )}
 
-      {/* File tree */}
+      {/* 文件树 */}
       <div className="file-explorer__tree">
         <FileTree dirPath={root} depth={0} onOpenFile={onOpenFile} />
       </div>
@@ -146,7 +146,7 @@ function ActionButton({
   )
 }
 
-// ── SVG Icons ──────────────────────────────────────────────────
+// ── SVG 图标 ──────────────────────────────────────────────────
 
 function NewFileIcon(): React.JSX.Element {
   return (

@@ -1,12 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 /**
- * contextBridge exposes a typed API to the renderer process.
- * The renderer NEVER calls ipcRenderer directly — it always goes through window.electronAPI.
- * This is the security boundary between the privileged main process and the web content.
+ * contextBridge 向 renderer 进程暴露带类型的 API。
+ * renderer 绝不直接调用 ipcRenderer，而是始终通过 window.electronAPI。
+ * 这是有权限 main 进程与网页内容之间的安全边界。
  */
 contextBridge.exposeInMainWorld('electronAPI', {
-  // Window controls (used by custom TitleBar on non-macOS)
+  // 窗口控制（供非 macOS 的自定义 TitleBar 使用）
   window: {
     minimize: () => ipcRenderer.invoke('window:minimize'),
     maximize: () => ipcRenderer.invoke('window:maximize'),
@@ -18,7 +18,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
 
-  // File System — Phase 2
+  // 文件系统 — Phase 2
   fs: {
     readDir: (path: string) => ipcRenderer.invoke('fs:readDir', path),
     readFile: (path: string) => ipcRenderer.invoke('fs:readFile', path),
@@ -37,7 +37,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
 
-  // Terminal — Phase 5
+  // 终端 — Phase 5
   terminal: {
     create: (id: string, cwd: string) =>
       ipcRenderer.invoke('terminal:create', id, cwd),
@@ -72,14 +72,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     branch: (cwd: string) => ipcRenderer.invoke('git:branch', cwd)
   },
 
-  // Search — Phase 7
+  // 搜索 — Phase 7
   search: {
     find: (root: string, query: string, options: unknown) =>
       ipcRenderer.invoke('search:find', root, query, options),
     cancel: () => ipcRenderer.invoke('search:cancel')
   },
 
-  // Config — Phase 6
+  // 配置 — Phase 6
   config: {
     get: () => ipcRenderer.invoke('config:get'),
     set: (partial: unknown) => ipcRenderer.invoke('config:set', partial),
@@ -91,7 +91,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
 
-  // Dialogs
+  // 对话框
   dialog: {
     openFolder: () => ipcRenderer.invoke('dialog:openFolder'),
     openFile: () => ipcRenderer.invoke('dialog:openFile'),
@@ -99,7 +99,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.invoke('dialog:showMessage', options)
   },
 
-  // Extension management (gallery install/uninstall) — Phase 6.6
+  // 扩展管理（从 gallery 安装/卸载）— Phase 6.6
   extensions: {
     listGallery: () => ipcRenderer.invoke('ext:listGallery'),
     install: (id: string) => ipcRenderer.invoke('ext:install', id),
@@ -108,11 +108,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
 })
 
 /**
- * Extension-host port handoff.
- * Main sends the renderer's end of the ext-host MessageChannel via
- * webContents.postMessage → arrives here with `event.ports`. We can't pass a
- * MessagePort across contextBridge, so re-post it into the main world; the
- * renderer listens for `window.onmessage` with data === 'exthost:port'.
+ * 扩展宿主端口交接。
+ * main 会通过 webContents.postMessage 把 ext-host MessageChannel 的 renderer 端发送过来，
+ * 到这里时端口位于 `event.ports`。MessagePort 不能直接穿过 contextBridge，
+ * 因此需要再 post 到主世界；renderer 会监听 `window.onmessage`，
+ * 并识别 data === 'exthost:port' 的消息。
  */
 ipcRenderer.on('exthost:port', e => {
   window.postMessage('exthost:port', '*', e.ports)

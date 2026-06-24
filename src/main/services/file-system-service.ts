@@ -16,23 +16,23 @@ export interface FileChangeEvent {
 }
 
 export class FileSystemService {
-  /** Active chokidar watchers keyed by the watched root path */
+  /** 活跃的 chokidar watcher，以被监听的根路径为 key */
   private watchers = new Map<string, FSWatcher>()
 
-  // ── Read operations ─────────────────────────────────────────
+  // ── 读取操作 ─────────────────────────────────────────
 
   async readDir(dirPath: string): Promise<FileNode[]> {
     const entries = await fs.readdir(dirPath, { withFileTypes: true })
 
     const nodes: FileNode[] = entries
-      .filter(e => !e.name.startsWith('.'))   // hide dot-files
+      .filter(e => !e.name.startsWith('.'))   // 隐藏点文件
       .map(e => ({
         name: e.name,
         path: path.join(dirPath, e.name),
         isDirectory: e.isDirectory()
       }))
 
-    // Directories first, then files — both sorted alphabetically
+    // 目录在前、文件在后；两组都按字母排序
     nodes.sort((a, b) => {
       if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1
       return a.name.localeCompare(b.name)
@@ -46,14 +46,14 @@ export class FileSystemService {
     return content
   }
 
-  // ── Write operations ─────────────────────────────────────────
+  // ── 写入操作 ─────────────────────────────────────────
 
   async writeFile(filePath: string, content: string): Promise<void> {
     await fs.writeFile(filePath, content, 'utf-8')
   }
 
   async createFile(filePath: string): Promise<void> {
-    // Ensure parent directory exists, then create the file
+    // 先确保父目录存在，再创建文件
     await fs.mkdir(path.dirname(filePath), { recursive: true })
     await fs.writeFile(filePath, '', 'utf-8')
   }
@@ -70,18 +70,18 @@ export class FileSystemService {
     await fs.rm(targetPath, { recursive: true, force: true })
   }
 
-  // ── File watching ────────────────────────────────────────────
+  // ── 文件监听 ────────────────────────────────────────────
 
   /**
-   * Start watching a directory. When changes occur, push FileChangeEvent
-   * to the renderer via mainWindow.webContents.send('fs:onChange', event).
+   * 开始监听目录。发生变化时，通过
+   * mainWindow.webContents.send('fs:onChange', event) 把 FileChangeEvent 推给 renderer。
    */
   watchStart(rootPath: string, mainWindow: BrowserWindow): void {
-    if (this.watchers.has(rootPath)) return  // already watching
+    if (this.watchers.has(rootPath)) return  // 已经在监听
 
     const watcher = watch(rootPath, {
       ignored: [
-        /(^|[/\\])\../,       // dot-files
+        /(^|[/\\])\../,       // 点文件
         /node_modules/,
         /\.git/,
         /out\//,

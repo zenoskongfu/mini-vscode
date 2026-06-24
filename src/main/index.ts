@@ -13,12 +13,12 @@ app.whenReady().then(() => {
 	const ipcRouter = new IPCRouter(windowManager);
 	ipcRouter.register();
 
-	// Launch the isolated extension host (utilityProcess) and broker its port
+	// 启动隔离的扩展宿主（utilityProcess），并转交它的通信端口
 	extensionHost = new ExtensionHost();
 	extensionHost.start(mainWindow);
 
 	app.on("activate", () => {
-		// for mac
+		// macOS 专用处理
 		if (windowManager.getMainWindow() === null) {
 			windowManager.createMainWindow();
 		}
@@ -26,7 +26,7 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-	// for windows and linux
+	// Windows/Linux 专用处理
 	if (process.platform !== "darwin") {
 		app.quit();
 	}

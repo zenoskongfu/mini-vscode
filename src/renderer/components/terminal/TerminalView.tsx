@@ -11,14 +11,14 @@ interface TerminalViewProps {
 }
 
 /**
- * Mounts one xterm.js instance bound to a pty (by id).
+ * 挂载一个绑定到 pty id 的 xterm.js 实例。
  *
- * Data flow:
- *   user types → term.onData → terminalService.write → IPC → pty.write
- *   pty output → IPC → terminalService fan-out → term.write(data)
+ * 数据流：
+ *   用户输入 → term.onData → terminalService.write → IPC → pty.write
+ *   pty 输出 → IPC → terminalService 分发 → term.write(data)
  *
- * All resources (xterm, data subscription, ResizeObserver) are torn down on
- * unmount — Disposable discipline.
+ * 所有资源（xterm、数据订阅、ResizeObserver）都会在卸载时释放，
+ * 遵守 Disposable 生命周期纪律。
  */
 export function TerminalView({ id }: TerminalViewProps): React.JSX.Element {
   const terminalService = useService(ITerminalService)
@@ -32,7 +32,7 @@ export function TerminalView({ id }: TerminalViewProps): React.JSX.Element {
       fontFamily: 'var(--font-family-mono)',
       fontSize: 13,
       cursorBlink: true,
-      // Map xterm theme to the workbench palette
+      // 将 xterm 主题映射到 workbench 调色板
       theme: {
         background: getCssVar('--color-bg-panel', '#1e1e1e'),
         foreground: getCssVar('--color-fg-default', '#cccccc'),
@@ -46,22 +46,22 @@ export function TerminalView({ id }: TerminalViewProps): React.JSX.Element {
     term.open(container)
     fitAddon.fit()
 
-    // user input → pty
+    // 用户输入 → pty
     const inputSub = term.onData(data => terminalService.write(id, data))
 
-    // pty output → terminal
+    // pty 输出 → terminal
     const unsubData = terminalService.onTerminalData(id, data => term.write(data))
 
-    // initial size sync
+    // 初始尺寸同步
     terminalService.resize(id, term.cols, term.rows)
 
-    // resize handling
+    // resize 处理
     const resizeObserver = new ResizeObserver(() => {
       try {
         fitAddon.fit()
         terminalService.resize(id, term.cols, term.rows)
       } catch {
-        // container not measurable yet
+        // 容器暂时还无法测量
       }
     })
     resizeObserver.observe(container)

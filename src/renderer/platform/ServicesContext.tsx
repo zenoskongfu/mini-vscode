@@ -2,11 +2,10 @@ import React, { createContext, useContext } from 'react'
 import { IInstantiationService, ServiceIdentifier } from '../instantiation/instantiation'
 
 /**
- * React bridge to the DI container.
+ * React 与 DI 容器之间的桥。
  *
- * VSCode isn't React — services are plain classes wired by the
- * InstantiationService. This Context exposes that container to the React tree,
- * and `useService` resolves a service by its identifier.
+ * VSCode 不是 React 应用：服务是由 InstantiationService 连接的普通 class。
+ * 这个 Context 把容器暴露给 React 树，`useService` 再通过服务标识符解析服务。
  */
 const ServicesContext = createContext<IInstantiationService | null>(null)
 
@@ -24,7 +23,7 @@ export function ServicesProvider({
   )
 }
 
-/** Resolve a service instance by its identifier (singleton from the container) */
+/** 通过服务标识符解析服务实例（来自容器的单例） */
 export function useService<T>(id: ServiceIdentifier<T>): T {
   const instantiationService = useContext(ServicesContext)
   if (!instantiationService) {

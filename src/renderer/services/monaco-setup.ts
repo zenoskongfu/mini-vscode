@@ -1,8 +1,8 @@
 import { loader } from '@monaco-editor/react'
 import * as monaco from 'monaco-editor'
 
-// Web workers — Vite bundles each via the ?worker suffix so Monaco runs offline
-// (no CDN), which is required inside Electron.
+// Web worker：Vite 会通过 ?worker 后缀分别打包，让 Monaco 可离线运行
+// （不依赖 CDN），这在 Electron 内是必需的。
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
 import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker'
@@ -12,20 +12,20 @@ import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 let initialized = false
 
 /**
- * Wire Monaco to use the bundled (local) monaco-editor instance and its web workers.
- * Must be called once before any editor mounts.
+ * 将 Monaco 接到本地打包的 monaco-editor 实例及其 web worker。
+ * 必须在任何编辑器挂载前调用一次。
  */
 export function setupMonaco(): void {
   if (initialized) return
   initialized = true
 
-  // Tell @monaco-editor/react to use the locally bundled monaco rather than CDN
+  // 告诉 @monaco-editor/react 使用本地打包的 monaco，而不是 CDN
   loader.config({ monaco })
 
-  // Expose the monaco instance for debugging / devtools inspection
+  // 暴露 monaco 实例，便于调试和 DevTools 检查
   ;(globalThis as Record<string, unknown>).__monaco = monaco
 
-  // Register the language workers
+  // 注册各语言 worker
   self.MonacoEnvironment = {
     getWorker(_workerId: string, label: string): Worker {
       switch (label) {
@@ -49,7 +49,7 @@ export function setupMonaco(): void {
   }
 }
 
-/** Map a file extension to a Monaco language id */
+/** 将文件扩展名映射为 Monaco language id */
 export function getLanguageForPath(filePath: string): string {
   const ext = filePath.split('.').pop()?.toLowerCase() ?? ''
   const map: Record<string, string> = {

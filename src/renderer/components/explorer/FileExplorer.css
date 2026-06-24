@@ -5,7 +5,7 @@
   overflow: hidden;
 }
 
-/* No workspace state */
+/* 未打开工作区状态 */
 .file-explorer__no-workspace {
   display: flex;
   flex-direction: column;
@@ -39,7 +39,7 @@
   background: var(--color-accent-hover);
 }
 
-/* Workspace header */
+/* 工作区标题 */
 .file-explorer__workspace-header {
   display: flex;
   align-items: center;
@@ -90,7 +90,7 @@
   color: var(--color-fg-default);
 }
 
-/* Inline create input */
+/* 内联创建输入框 */
 .file-explorer__inline-create {
   padding: 2px 8px;
 }
@@ -107,7 +107,7 @@
   outline: none;
 }
 
-/* Tree scroll area */
+/* 文件树滚动区域 */
 .file-explorer__tree {
   flex: 1;
   overflow: auto;

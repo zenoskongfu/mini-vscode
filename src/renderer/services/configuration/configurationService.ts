@@ -7,24 +7,24 @@ type Settings = Record<string, unknown>;
 export interface IConfigurationService {
 	readonly _serviceBrand: undefined;
 
-	/** Fires whenever any configuration value changes (settings.json saved) */
+	/** 任意配置值变化（settings.json 保存）时触发 */
 	readonly onDidChangeConfiguration: Event<void>;
 
-	/** Load settings from the main process — call once at startup */
+	/** 从 main 进程加载设置；启动时调用一次 */
 	initialize(): Promise<void>;
 
 	getValue<T>(key: string, fallback: T): T;
 	updateValue(key: string, value: unknown): Promise<void>;
-	/** Absolute path of the backing settings.json (for "Open Settings") */
+	/** 底层 settings.json 的绝对路径（供“Open Settings”使用） */
 	getSettingsPath(): Promise<string>;
 }
 
 export const IConfigurationService = createDecorator<IConfigurationService>("configurationService");
 
 /**
- * ConfigurationService (renderer) — VSCode IConfigurationService analog.
- * Caches the settings object loaded from the main-process settings.json and
- * notifies subscribers when it changes on disk.
+ * ConfigurationService（renderer）：对应 VSCode 的 IConfigurationService。
+ * 缓存从 main 进程 settings.json 加载的设置对象，
+ * 并在磁盘内容变化时通知订阅者。
  */
 export class ConfigurationService implements IConfigurationService {
 	declare readonly _serviceBrand: undefined;
@@ -35,7 +35,7 @@ export class ConfigurationService implements IConfigurationService {
 	readonly onDidChangeConfiguration = this._onDidChangeConfiguration.event;
 
 	constructor() {
-		// React to external edits (settings.json saved in the editor)
+		// 响应外部编辑（例如在编辑器中保存 settings.json）
 		window.electronAPI.config.onChange((settings) => {
 			this._settings = settings;
 			// 告诉页面UI，预计订阅了该事件的themeService
@@ -54,7 +54,7 @@ export class ConfigurationService implements IConfigurationService {
 	}
 
 	async updateValue(key: string, value: unknown): Promise<void> {
-		// Optimistic local update; main writes the file → onChange confirms
+		// 乐观本地更新；main 写入文件后由 onChange 确认
 		this._settings = { ...this._settings, [key]: value };
 		this._onDidChangeConfiguration.fire();
 		await window.electronAPI.config.set({ [key]: value });

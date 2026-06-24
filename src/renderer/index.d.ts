@@ -1,9 +1,9 @@
-// Ambient declarations for the renderer.
+// renderer 的环境声明。
 
-// Allow importing CSS files as side-effect modules (Vite handles the bundling).
+// 允许将 CSS 文件作为副作用模块导入（由 Vite 负责打包）。
 declare module '*.css'
 
-// Vite ?worker imports — Monaco's web workers are imported with this suffix.
+// Vite ?worker 导入：Monaco 的 web worker 会通过这个后缀导入。
 declare module '*?worker' {
   const workerConstructor: {
     new (): Worker

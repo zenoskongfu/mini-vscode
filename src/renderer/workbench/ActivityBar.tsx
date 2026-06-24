@@ -19,11 +19,11 @@ interface ViewItem {
 }
 
 /**
- * The vertical icon strip on the far left.
- * Clicking an icon switches the sidebar view (Explorer, Search, SCM, Extensions).
- * Clicking the active icon again toggles the sidebar closed.
+ * 最左侧的垂直图标栏。
+ * 点击图标会切换侧边栏视图（Explorer、Search、SCM、Extensions）。
+ * 再次点击当前活动图标会收起侧边栏。
  *
- * Bottom section holds Settings and Terminal toggle (not a sidebar view).
+ * 底部区域放置 Settings 和 Terminal toggle（它们不是侧边栏视图）。
  */
 export function ActivityBar({
   className = '',
@@ -50,8 +50,8 @@ export function ActivityBar({
     }
   }
 
-  // Manage gear (bottom) opens a menu of commands — VSCode's gear is a menu, not
-  // a direct action. Each item just dispatches a command id.
+  // 底部管理齿轮打开命令菜单：VSCode 的齿轮是菜单，
+  // 不是直接动作。每个菜单项只分发一个 command id。
   const openManageMenu = (e: React.MouseEvent<HTMLButtonElement>): void => {
     const rect = e.currentTarget.getBoundingClientRect()
     setManageMenu({ x: rect.right + 2, y: rect.top })
@@ -66,7 +66,7 @@ export function ActivityBar({
 
   return (
     <aside className={`activity-bar ${className}`}>
-      {/* Top: primary views */}
+      {/* 顶部：主视图 */}
       <div className="activity-bar__top">
         {topViews.map(view => (
           <button
@@ -83,7 +83,7 @@ export function ActivityBar({
         ))}
       </div>
 
-      {/* Bottom: settings + terminal */}
+      {/* 底部：设置 + 终端 */}
       <div className="activity-bar__bottom">
         <button
           className="activity-bar__item"
@@ -113,7 +113,7 @@ export function ActivityBar({
   )
 }
 
-/* ── SVG Icon components (inline, matching VSCode's Codicons style) ── */
+/* ── SVG 图标组件（内联，贴近 VSCode Codicons 风格）── */
 
 function ExplorerIcon(): React.JSX.Element {
   return (

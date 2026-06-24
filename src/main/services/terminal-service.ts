@@ -5,12 +5,11 @@ import os from 'os'
 type IPty = pty.IPty
 
 /**
- * TerminalService (main process) — owns real shell processes via node-pty.
+ * TerminalService（main 进程）通过 node-pty 持有真实 shell 进程。
  *
- * Each terminal is a pty keyed by id. Output is pushed to the renderer with a
- * one-way `terminal:data` message (high-frequency stream → never invoke/return).
- * This is the exact stack VSCode ships: node-pty in a Node context, xterm.js in
- * the renderer.
+ * 每个终端都是一个按 id 索引的 pty。输出通过单向 terminal:data 消息
+ * 推送给 renderer（高频流数据，绝不使用 invoke/return）。
+ * 这与 VSCode 的技术栈一致：Node 上下文中的 node-pty，renderer 中的 xterm.js。
  */
 export class TerminalService {
   private terminals = new Map<string, IPty>()
@@ -34,13 +33,13 @@ export class TerminalService {
       env: process.env as Record<string, string>
     })
 
-    // Stream shell output to the renderer
+    // 将 shell 输出流式推送到 renderer
     ptyProcess.onData(data => {
       if (mainWindow.isDestroyed()) return
       mainWindow.webContents.send('terminal:data', id, data)
     })
 
-    // Notify renderer when the shell exits
+    // shell 退出时通知 renderer
     ptyProcess.onExit(({ exitCode }) => {
       if (!mainWindow.isDestroyed()) {
         mainWindow.webContents.send('terminal:exit', id, exitCode)
@@ -61,7 +60,7 @@ export class TerminalService {
     try {
       term.resize(cols, rows)
     } catch {
-      // ignore resize on a dead pty
+      // pty 已结束时忽略 resize
     }
   }
 

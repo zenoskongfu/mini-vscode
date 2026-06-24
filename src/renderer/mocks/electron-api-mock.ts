@@ -1,15 +1,15 @@
 /**
- * Browser-preview mock for window.electronAPI.
- * Only injected when running outside Electron (no preload script).
- * Stubs all IPC calls so the UI renders without crashing.
+ * window.electronAPI 的浏览器预览 mock。
+ * 只在 Electron 外运行时注入（此时没有 preload 脚本）。
+ * 它会 stub 所有 IPC 调用，让 UI 可以正常渲染而不崩溃。
  */
 
 const noop = (): Promise<void> => Promise.resolve()
 const noopCleanup = (): (() => void) => () => undefined
 
 /**
- * A fake terminal that echoes typed input back (with a prompt + line editing),
- * so the xterm UI is verifiable in the browser preview without a real pty.
+ * 一个会回显输入的假终端（带 prompt 和简单行编辑），
+ * 这样浏览器预览中无需真实 pty 也能验证 xterm UI。
  */
 function createTerminalEchoMock(): Window['electronAPI']['terminal'] {
   const dataCbs = new Set<(id: string, data: string) => void>()
@@ -34,7 +34,7 @@ function createTerminalEchoMock(): Window['electronAPI']['terminal'] {
           if (line.length > 0) { line = line.slice(0, -1); emit(id, '\b \b') }
         } else {
           line += ch
-          emit(id, ch) // echo
+          emit(id, ch) // 回显
         }
       }
       lineBuf.set(id, line)
@@ -50,7 +50,7 @@ function createTerminalEchoMock(): Window['electronAPI']['terminal'] {
   }
 }
 
-// A tiny fake workspace so the browser preview can exercise the Explorer + editor.
+// 一个很小的假工作区，让浏览器预览能跑通 Explorer 和编辑器。
 const FAKE_ROOT = '/preview/mini-vscode'
 const FAKE_FILES: Record<string, string> = {
   [`${FAKE_ROOT}/README.md`]: '# Mini VSCode\n\nA learning project built with Electron + React + Monaco.\n\n- File Explorer\n- Monaco editor with tabs\n- Integrated terminal (coming soon)\n',
@@ -70,8 +70,8 @@ const FAKE_DIRS: Record<string, Array<{ name: string; path: string; isDirectory:
 }
 
 /**
- * Stateful config mock — `set` merges + notifies onChange listeners, so theme
- * toggling and live settings updates are verifiable in the browser preview.
+ * 有状态配置 mock：`set` 会合并值并通知 onChange listener，
+ * 让主题切换和实时设置更新可以在浏览器预览中验证。
  */
 function createConfigMock(): Window['electronAPI']['config'] {
   let settings: Record<string, unknown> = {
@@ -96,7 +96,7 @@ function createConfigMock(): Window['electronAPI']['config'] {
 }
 
 export function injectElectronAPIMock(): void {
-  if (typeof window !== 'undefined' && window.electronAPI) return  // real preload present
+  if (typeof window !== 'undefined' && window.electronAPI) return  // 已存在真实 preload
 
   const mock: Window['electronAPI'] = {
     window: {
@@ -109,7 +109,7 @@ export function injectElectronAPIMock(): void {
     fs: {
       readDir: (path: string) => Promise.resolve(FAKE_DIRS[path] ?? []),
       readFile: (path: string) =>
-        Promise.resolve(FAKE_FILES[path] ?? `// ${path}\n// (preview mock content)\n`),
+        Promise.resolve(FAKE_FILES[path] ?? `// ${path}\n// （预览 mock 内容）\n`),
       writeFile: noop,
       createFile: noop,
       createDir: noop,
@@ -149,6 +149,6 @@ export function injectElectronAPIMock(): void {
     }
   }
 
-  // @ts-ignore — intentional polyfill for browser preview
+  // @ts-ignore — 浏览器预览刻意添加的 polyfill
   window.electronAPI = mock
 }

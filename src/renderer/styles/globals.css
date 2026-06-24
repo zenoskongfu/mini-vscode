@@ -1,10 +1,10 @@
 /* ============================================================
-   CSS Custom Properties — VS Dark+ theme (default)
-   All components reference these variables, never hardcoded colors.
-   ThemeService swaps them at runtime for light/custom themes.
+   CSS 自定义属性 — VS Dark+ 主题（默认）
+   所有组件都引用这些变量，不直接硬编码颜色。
+   ThemeService 会在运行时替换它们，以支持浅色/自定义主题。
    ============================================================ */
 :root {
-  /* Background layers */
+  /* 背景层 */
   --color-bg-workbench: #1e1e1e;
   --color-bg-sidebar: #252526;
   --color-bg-editor: #1e1e1e;
@@ -18,7 +18,7 @@
   --color-bg-active: #37373d;
   --color-bg-selected: #094771;
 
-  /* Foreground / text */
+  /* 前景/文本 */
   --color-fg-default: #cccccc;
   --color-fg-muted: #858585;
   --color-fg-active: #ffffff;
@@ -28,50 +28,50 @@
   --color-fg-status-bar: #ffffff;
   --color-fg-title-bar: #cccccc;
 
-  /* Borders */
+  /* 边框 */
   --color-border: #454545;
   --color-border-focus: #007fd4;
 
-  /* Accent */
+  /* 强调色 */
   --color-accent: #007acc;
   --color-accent-hover: #0062a3;
 
-  /* Editor */
+  /* 编辑器 */
   --color-editor-line-highlight: #282828;
   --color-editor-selection: #264f78;
   --color-editor-cursor: #aeafad;
   --color-editor-line-number: #858585;
   --color-editor-line-number-active: #c6c6c6;
 
-  /* Tabs */
+  /* 标签页 */
   --color-tab-active-bg: #1e1e1e;
   --color-tab-active-border: #007acc;
   --color-tab-inactive-bg: #2d2d2d;
   --color-tab-inactive-fg: #858585;
 
-  /* Panel tabs */
+  /* 面板标签页 */
   --color-panel-tab-active-border: #007acc;
 
-  /* Git colors */
+  /* Git 颜色 */
   --color-git-added: #81b88b;
   --color-git-modified: #e2c08d;
   --color-git-deleted: #c74e39;
   --color-git-untracked: #73c991;
 
-  /* Diagnostic colors */
+  /* 诊断颜色 */
   --color-error: #f48771;
   --color-warning: #cca700;
   --color-info: #75beff;
 
-  /* Notification */
+  /* 通知 */
   --color-bg-notification: #252526;
   --color-notification-border: #007acc;
 
-  /* Scrollbar */
+  /* 滚动条 */
   --color-scrollbar-thumb: #424242;
   --color-scrollbar-thumb-hover: #686868;
 
-  /* Typography */
+  /* 排版 */
   --font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI',
     system-ui, sans-serif;
   --font-family-mono: 'SF Mono', 'Cascadia Code', 'Consolas', 'Courier New',
@@ -80,7 +80,7 @@
   --font-size-small: 11px;
   --font-size-mono: 13px;
 
-  /* Layout dimensions */
+  /* 布局尺寸 */
   --title-bar-height: 28px;
   --activity-bar-width: 48px;
   --sidebar-width: 240px;
@@ -89,23 +89,23 @@
   --tab-height: 35px;
   --breadcrumb-height: 22px;
 
-  /* Resize handle */
+  /* 调整尺寸手柄 */
   --resize-handle-size: 4px;
 
-  /* Z-index layers */
+  /* z-index 层级 */
   --z-overlay: 100;
   --z-command-palette: 200;
   --z-context-menu: 300;
   --z-notification: 400;
   --z-tooltip: 500;
 
-  /* Animation */
+  /* 动画 */
   --transition-fast: 80ms ease;
   --transition-normal: 150ms ease;
 }
 
 /* ============================================================
-   Reset & Base
+   重置与基础样式
    ============================================================ */
 *,
 *::before,
@@ -132,12 +132,12 @@ body {
   user-select: none;
 }
 
-/* Allow text selection in editor-like areas */
+/* 允许在类编辑器区域选择文本 */
 .selectable {
   user-select: text;
 }
 
-/* Scrollbar styling */
+/* 滚动条样式 */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -156,7 +156,7 @@ body {
   background: var(--color-scrollbar-thumb-hover);
 }
 
-/* Focus outline reset — components handle their own focus styles */
+/* 重置焦点轮廓：组件自己处理焦点样式 */
 :focus {
   outline: none;
 }
@@ -166,7 +166,7 @@ body {
   outline-offset: -1px;
 }
 
-/* Utility */
+/* 工具类 */
 .icon {
   display: flex;
   align-items: center;

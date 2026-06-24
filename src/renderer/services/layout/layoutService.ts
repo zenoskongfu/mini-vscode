@@ -39,9 +39,9 @@ const KEY_PANEL = 'layout.panelVisible'
 const KEY_VIEW = 'layout.activeView'
 
 /**
- * LayoutService — workbench part visibility + active activity-bar view + cursor.
- * Pane *sizes* are owned by Allotment; this service only tracks visibility/view.
- * Visibility + active view are persisted via IStorageService.
+ * LayoutService 持有 workbench 各部分可见性、活动 activity-bar 视图和光标位置。
+ * pane 的尺寸由 Allotment 持有；本服务只跟踪可见性与当前视图。
+ * 可见性与活动视图会通过 IStorageService 持久化。
  */
 export class LayoutService implements ILayoutService {
   declare readonly _serviceBrand: undefined
@@ -74,7 +74,7 @@ export class LayoutService implements ILayoutService {
     this._sidebarVisible = this.storageService.getBoolean(KEY_SIDEBAR, StorageScope.GLOBAL, true)
     this._panelVisible = this.storageService.getBoolean(KEY_PANEL, StorageScope.GLOBAL, true)
     this._activeView = (this.storageService.get(KEY_VIEW, StorageScope.GLOBAL) as ActivityView) ?? 'explorer'
-    // Fire so any already-mounted views pick up restored state
+    // 触发事件，让已挂载视图拿到恢复后的状态
     this._onDidChangeSidebarVisibility.fire(this._sidebarVisible)
     this._onDidChangePanelVisibility.fire(this._panelVisible)
     this._onDidChangeActiveView.fire(this._activeView)

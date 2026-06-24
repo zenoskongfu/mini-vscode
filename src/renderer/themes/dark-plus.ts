@@ -1,6 +1,6 @@
 import type { ThemeDefinition } from './theme-types'
 
-/** VS Dark+ — matches the values originally hardcoded in globals.css */
+/** VS Dark+：对应原先硬编码在 globals.css 中的配色 */
 export const darkPlus: ThemeDefinition = {
   id: 'Dark+',
   label: 'Dark+ (default dark)',

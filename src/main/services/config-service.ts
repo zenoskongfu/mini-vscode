@@ -14,12 +14,12 @@ const DEFAULT_SETTINGS: Settings = {
 }
 
 /**
- * ConfigService (main process) — owns the user settings.json file
- * (~/.mini-vscode/settings.json), mirroring VSCode's file-backed configuration.
+ * ConfigService（main 进程）持有用户 settings.json 文件
+ *（~/.mini-vscode/settings.json），模拟 VSCode 基于文件的配置系统。
  *
- * - Reads synchronously on startup so `config:get` returns immediately.
- * - Watches the file with chokidar and pushes `config:onChange` when it changes
- *   on disk (e.g. the user edits settings.json in the editor and saves).
+ * - 启动时同步读取，让 config:get 可以立即返回。
+ * - 使用 chokidar 监听文件，并在磁盘内容变化时推送 config:onChange
+ *   （例如用户在编辑器里修改并保存 settings.json）。
  */
 export class ConfigService {
   private readonly dir = path.join(os.homedir(), '.mini-vscode')
@@ -27,7 +27,7 @@ export class ConfigService {
   private settings: Settings = { ...DEFAULT_SETTINGS }
   private watcher: FSWatcher | null = null
 
-  /** Load (creating the file with defaults if missing) — call once at startup */
+  /** 加载配置（缺失时用默认值创建文件）；启动时调用一次 */
   init(mainWindow: BrowserWindow): void {
     try {
       if (!fs.existsSync(this.file)) {
@@ -51,7 +51,7 @@ export class ConfigService {
     return this.settings
   }
 
-  /** Merge a partial update and write atomically */
+  /** 合并部分更新，并以原子方式写入 */
   async set(partial: Settings): Promise<void> {
     this.settings = { ...this.settings, ...partial }
     await this.writeToDisk(this.settings)
@@ -63,7 +63,7 @@ export class ConfigService {
       const parsed = JSON.parse(raw)
       return { ...DEFAULT_SETTINGS, ...parsed }
     } catch {
-      // Malformed JSON (mid-edit) — keep the last good settings
+      // JSON 格式暂时无效（编辑到一半）时保留上一份可用配置
       return this.settings
     }
   }

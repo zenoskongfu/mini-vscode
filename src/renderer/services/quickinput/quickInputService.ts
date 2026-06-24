@@ -16,8 +16,8 @@ export interface IQuickInputService {
 export const IQuickInputService = createDecorator<IQuickInputService>('quickInputService')
 
 /**
- * QuickInputService — owns the Command Palette overlay's visibility
- * (VSCode IQuickInputService analog, simplified to commands-only).
+ * QuickInputService 持有命令面板覆盖层的可见性，
+ * 对应 VSCode 的 IQuickInputService（此处简化为只处理命令）。
  */
 export class QuickInputService implements IQuickInputService {
   declare readonly _serviceBrand: undefined

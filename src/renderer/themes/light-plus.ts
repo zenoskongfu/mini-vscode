@@ -1,6 +1,6 @@
 import type { ThemeDefinition } from './theme-types'
 
-/** VS Light+ — approximation of VSCode's default light theme */
+/** VS Light+：近似 VSCode 默认浅色主题 */
 export const lightPlus: ThemeDefinition = {
   id: 'Light+',
   label: 'Light+ (default light)',

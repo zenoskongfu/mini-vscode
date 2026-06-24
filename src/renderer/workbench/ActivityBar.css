@@ -43,7 +43,7 @@
   color: var(--color-fg-activity-bar-active);
 }
 
-/* Left edge indicator bar — matches VSCode's active view highlight */
+/* 左侧指示条：对齐 VSCode 的活动视图高亮 */
 .activity-bar__active-indicator {
   position: absolute;
   left: 0;

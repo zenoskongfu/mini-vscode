@@ -8,14 +8,14 @@ interface TitleBarProps {
 const isMac = navigator.platform.toUpperCase().includes('MAC')
 
 /**
- * Custom title bar.
+ * 自定义标题栏。
  *
- * On macOS: traffic-light buttons are rendered natively by Electron
- * (titleBarStyle: 'hidden' + trafficLightPosition in window-manager.ts).
- * We just need to leave space on the left (-webkit-app-region: drag covers the rest).
+ * macOS：红黄绿按钮由 Electron 原生渲染
+ *（window-manager.ts 中的 titleBarStyle: 'hidden' + trafficLightPosition）。
+ * 这里仅需在左侧留出空间，其余区域由 -webkit-app-region: drag 负责拖拽。
  *
- * On Windows/Linux: we render our own minimize/maximize/close buttons
- * and communicate with the main process via window.electronAPI.window.*
+ * Windows/Linux：渲染自己的最小化/最大化/关闭按钮，
+ * 并通过 window.electronAPI.window.* 与 main 进程通信。
  */
 export function TitleBar({ className = '' }: TitleBarProps): React.JSX.Element {
   const handleMinimize = (): void => {
@@ -30,15 +30,15 @@ export function TitleBar({ className = '' }: TitleBarProps): React.JSX.Element {
 
   return (
     <header className={`title-bar ${className}`}>
-      {/* macOS: spacer for traffic lights (72px = 3 buttons × 12px + padding) */}
+      {/* macOS：为红黄绿按钮留出占位（72px = 3 个按钮 × 12px + padding） */}
       {isMac && <div className="title-bar__mac-spacer" />}
 
-      {/* Center: app name + file path (placeholder for Phase 3) */}
+      {/* 中间：应用名 + 文件路径（Phase 3 占位） */}
       <div className="title-bar__center">
         <span className="title-bar__app-name">Mini VSCode</span>
       </div>
 
-      {/* Windows/Linux: custom window controls */}
+      {/* Windows/Linux：自定义窗口按钮 */}
       {!isMac && (
         <div className="title-bar__controls">
           <button

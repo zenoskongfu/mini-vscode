@@ -7,7 +7,7 @@ import type { FileNode } from '../../types/file-tree'
 export interface IWorkspaceService {
   readonly _serviceBrand: undefined
 
-  /** Fires whenever the open folder changes (open/close) */
+  /** 打开文件夹变化（打开/关闭）时触发 */
   readonly onDidChangeRoot: Event<string | null>
 
   readonly root: string | null
@@ -24,9 +24,9 @@ export const IWorkspaceService = createDecorator<IWorkspaceService>('workspaceSe
 const STORAGE_KEY_ROOT = 'workspace.root'
 
 /**
- * WorkspaceService — owns the active folder root.
- * State lives in the class; consumers subscribe to onDidChangeRoot.
- * The last opened folder is persisted via IStorageService (GLOBAL scope).
+ * WorkspaceService 持有当前活动文件夹根路径。
+ * 状态位于 class 内部；消费者通过 onDidChangeRoot 订阅。
+ * 上次打开的文件夹会通过 IStorageService（GLOBAL 作用域）持久化。
  */
 export class WorkspaceService implements IWorkspaceService {
   declare readonly _serviceBrand: undefined
@@ -42,7 +42,7 @@ export class WorkspaceService implements IWorkspaceService {
     return this._root
   }
 
-  /** Restore the previously opened folder (called once at startup) */
+  /** 恢复上次打开的文件夹（启动时调用一次） */
   restore(): void {
     const saved = this.storageService.get(STORAGE_KEY_ROOT, StorageScope.GLOBAL)
     if (saved) {
@@ -59,7 +59,7 @@ export class WorkspaceService implements IWorkspaceService {
   async setRoot(path: string | null): Promise<void> {
     if (this._root === path) return
 
-    // Stop watching the previous root
+    // 停止监听上一个根目录
     if (this._root) {
       await window.electronAPI.fs.watchStop(this._root)
     }

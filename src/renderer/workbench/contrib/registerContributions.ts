@@ -10,11 +10,10 @@ import { IConfigurationService } from '../../services/configuration/configuratio
 import { IThemeService } from '../../services/theme/themeService'
 
 /**
- * Register the built-in commands + their default keybindings.
+ * 注册内置命令及其默认快捷键。
  *
- * Called once at startup with the root container. Command handlers resolve the
- * services they act on from the container — keeping the wiring DI-consistent
- * (VSCode does the analogous thing in its workbench contributions).
+ * 启动时用根容器调用一次。命令处理器从容器中解析自己要操作的服务，
+ * 保持 wiring 与 DI 一致（VSCode 的 workbench contributions 也采用类似方式）。
  */
 export function registerWorkbenchContributions(insta: IInstantiationService): void {
   const commandService = insta.get(ICommandService)
@@ -38,7 +37,7 @@ export function registerWorkbenchContributions(insta: IInstantiationService): vo
     if (chord) keybindingService.registerKeybinding(chord, id)
   }
 
-  // ── Command Palette ──
+  // ── 命令面板 ──
   register(
     'workbench.action.showCommands',
     'Show All Commands',
@@ -47,7 +46,7 @@ export function registerWorkbenchContributions(insta: IInstantiationService): vo
     'mod+shift+p'
   )
 
-  // ── View switching ──
+  // ── 视图切换 ──
   const showView = (view: ActivityView) => () => {
     layoutService.setActiveView(view)
     layoutService.setSidebarVisible(true)
@@ -57,7 +56,7 @@ export function registerWorkbenchContributions(insta: IInstantiationService): vo
   register('workbench.view.scm', 'Show Source Control', 'View', showView('scm'), 'mod+shift+g')
   register('workbench.view.extensions', 'Show Extensions', 'View', showView('extensions'), 'mod+shift+x')
 
-  // ── Layout toggles ──
+  // ── 布局切换 ──
   register(
     'workbench.action.toggleSidebarVisibility',
     'Toggle Primary Side Bar Visibility',
@@ -73,7 +72,7 @@ export function registerWorkbenchContributions(insta: IInstantiationService): vo
     'mod+j'
   )
 
-  // ── Files ──
+  // ── 文件 ──
   register(
     'workbench.action.files.openFolder',
     'Open Folder…',
@@ -102,9 +101,9 @@ export function registerWorkbenchContributions(insta: IInstantiationService): vo
     () => workspaceService.closeFolder()
   )
 
-  // ── Terminal ──
-  // Note: our keybinding scheme normalizes Ctrl/Cmd to "mod", so this is
-  // Cmd+` on macOS (VSCode uses Ctrl+` on all platforms — a deliberate simplification).
+  // ── 终端 ──
+  // 注意：我们的快捷键体系把 Ctrl/Cmd 标准化为 "mod"，因此这里在
+  // macOS 上是 Cmd+`（VSCode 全平台使用 Ctrl+`；这里是刻意简化）。
   register(
     'workbench.action.terminal.toggle',
     'Toggle Terminal',
@@ -137,7 +136,7 @@ export function registerWorkbenchContributions(insta: IInstantiationService): vo
     }
   )
 
-  // ── Preferences ──
+  // ── 偏好设置 ──
   register(
     'workbench.action.openSettingsJson',
     'Open Settings (JSON)',

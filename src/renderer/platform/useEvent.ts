@@ -2,18 +2,16 @@ import { useCallback, useRef, useSyncExternalStore } from "react";
 import type { Event } from "../base/event";
 
 /**
- * Subscribe a React component to one or more service Emitter events.
+ * 让 React 组件订阅一个或多个服务 Emitter 事件。
  *
- * `getValue` reads the current value from the service; the component re-renders
- * whenever any of the given events fire AND the returned value changes by
- * reference. This is the read-side of VSCode's service→view reactivity, adapted
- * to React via useSyncExternalStore.
+ * `getValue` 从服务读取当前值；当任意事件触发，且返回值引用发生变化时，组件会重新渲染。
+ * 这是 VSCode 服务→视图响应式读侧在 React/useSyncExternalStore 上的适配。
  *
- * IMPORTANT: `getValue` should return a referentially-stable value when nothing
- * changed (e.g. the service's own array/object field), to avoid render loops.
+ * 重要：未发生真实变化时，`getValue` 应返回引用稳定的值
+ *（例如服务自己的数组/对象字段），避免渲染循环。
  */
 export function useEvent<T>(event: Event<unknown> | Event<unknown>[], getValue: () => T): T {
-	// Keep a stable reference to the events array across renders
+	// 在多次 render 之间保持 events 数组引用稳定
 	const eventsRef = useRef(event);
 	eventsRef.current = event;
 

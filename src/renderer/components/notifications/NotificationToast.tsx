@@ -5,8 +5,8 @@ import { INotificationService } from '../../services/notification/notificationSe
 import './NotificationToast.css'
 
 /**
- * Bottom-right toast stack. Subscribes to INotificationService and renders the
- * active notifications (auto-dismissed by the service).
+ * 右下角 toast 堆栈。订阅 INotificationService，
+ * 并渲染当前活动通知（自动关闭由服务负责）。
  */
 export function NotificationToasts(): React.JSX.Element | null {
   const notificationService = useService(INotificationService)

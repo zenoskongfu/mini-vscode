@@ -12,8 +12,8 @@ interface PanelProps {
 type PanelTab = "terminal" | "problems" | "output";
 
 /**
- * Bottom panel container.
- * Hosts: Terminal (real pty via xterm), Problems, Output tabs.
+ * 底部面板容器。
+ * 承载 Terminal（真实 pty + xterm）、Problems、Output 标签。
  */
 export function Panel({ className = "" }: PanelProps): React.JSX.Element {
 	const [activeTab, setActiveTab] = useState<PanelTab>("terminal");
@@ -26,7 +26,7 @@ export function Panel({ className = "" }: PanelProps): React.JSX.Element {
 
 	return (
 		<div className={`panel ${className}`}>
-			{/* Tab strip */}
+			{/* 标签栏 */}
 			<div className='panel__tabs'>
 				{tabs.map((tab) => (
 					<button
@@ -41,8 +41,8 @@ export function Panel({ className = "" }: PanelProps): React.JSX.Element {
 				))}
 			</div>
 
-			{/* Content — keep terminal mounted (display:none when inactive) so the
-          shell session survives tab switches */}
+			{/* 内容：保持终端挂载（非活动时 display:none），这样
+          切换标签时 shell 会话不会丢失 */}
 			<div className='panel__content'>
 				<div className='panel__pane' style={{ display: activeTab === "terminal" ? "block" : "none" }}>
 					<TerminalPane active={activeTab === "terminal"} />
@@ -64,16 +64,16 @@ export function Panel({ className = "" }: PanelProps): React.JSX.Element {
 }
 
 /**
- * Lazily creates one terminal the first time the terminal tab is shown,
- * then renders its xterm view.
+ * 第一次显示终端标签页时懒创建一个终端，
+ * 然后渲染对应的 xterm 视图。
  */
 function TerminalPane({ active }: { active: boolean }): React.JSX.Element {
 	const terminalService = useService(ITerminalService);
 	const terminals = useEvent(terminalService.onDidChangeTerminals, () => terminalService.terminals);
 	const activeId = useEvent(terminalService.onDidChangeTerminals, () => terminalService.activeId);
 
-	// Create the first terminal on first reveal. cwd policy (workspace root)
-	// lives inside TerminalService, so callers never pass it.
+	// 首次显示时创建第一个终端。cwd 策略（工作区根目录）
+	// 位于 TerminalService 内部，因此调用方无需传入。
 	useEffect(() => {
 		if (active && terminalService.terminals.length === 0) {
 			terminalService.createTerminal();
@@ -90,7 +90,7 @@ function TerminalPane({ active }: { active: boolean }): React.JSX.Element {
 
 	return (
 		<div className='panel__terminal-wrap'>
-			{/* Terminal toolbar: selector (switch) + new + kill */}
+			{/* 终端工具栏：选择器（切换）+ 新建 + 关闭 */}
 			<div className='terminal-toolbar'>
 				<div className='terminal-toolbar__selector'>
 					{terminals.map((t) => (
@@ -124,7 +124,7 @@ function TerminalPane({ active }: { active: boolean }): React.JSX.Element {
 				</div>
 			</div>
 
-			{/* Mount every terminal; show only the active one */}
+			{/* 挂载所有终端；只显示当前活动终端 */}
 			<div className='panel__terminal-views'>
 				{terminals.map((t) => (
 					<div

@@ -11,7 +11,7 @@ export interface ITerminalInstance {
 export interface ITerminalService {
   readonly _serviceBrand: undefined
 
-  /** Fires when terminals are added/removed or the active one changes */
+  /** 终端新增/移除或当前活动终端变化时触发 */
   readonly onDidChangeTerminals: Event<void>
 
   readonly terminals: readonly ITerminalInstance[]
@@ -24,7 +24,7 @@ export interface ITerminalService {
   write(id: string, data: string): void
   resize(id: string, cols: number, rows: number): void
 
-  /** Subscribe to a specific terminal's output stream; returns an unsubscribe fn */
+  /** 订阅指定终端的输出流；返回取消订阅函数 */
   onTerminalData(id: string, cb: (data: string) => void): () => void
 }
 
@@ -33,11 +33,11 @@ export const ITerminalService = createDecorator<ITerminalService>('terminalServi
 let seq = 0
 
 /**
- * TerminalService (renderer) — manages terminal instance metadata and bridges
- * the xterm views to the main-process pty over IPC.
+ * TerminalService（renderer）管理终端实例元数据，并把 xterm 视图
+ * 通过 IPC 桥接到 main 进程里的 pty。
  *
- * It owns ONE `terminal:data` / `terminal:exit` subscription and fans output
- * out to per-id callbacks (the xterm view registers its writer here).
+ * 它只持有一组 `terminal:data` / `terminal:exit` 订阅，
+ * 再把输出分发到按 id 记录的回调（xterm 视图会在这里注册 writer）。
  */
 export class TerminalService implements ITerminalService {
   declare readonly _serviceBrand: undefined
@@ -45,14 +45,14 @@ export class TerminalService implements ITerminalService {
   private _terminals: ITerminalInstance[] = []
   private _activeId: string | null = null
 
-  /** id → output sink (the mounted xterm's write) */
+  /** id → 输出接收器（已挂载 xterm 的 write 方法） */
   private _dataSinks = new Map<string, (data: string) => void>()
 
   private readonly _onDidChangeTerminals = new Emitter<void>()
   readonly onDidChangeTerminals = this._onDidChangeTerminals.event
 
   constructor(@IWorkspaceService private readonly workspaceService: IWorkspaceService) {
-    // Single IPC subscription, fanned out by id
+    // 只建立一次 IPC 订阅，再按 id 分发
     window.electronAPI.terminal.onData((id, data) => {
       this._dataSinks.get(id)?.(data)
     })
@@ -70,15 +70,15 @@ export class TerminalService implements ITerminalService {
   }
 
   /**
-   * Create a terminal.
-   * @param cwd Explicit override. When omitted, the default-cwd policy applies:
-   *   explicit cwd ?? workspace root ?? (main process falls back to home dir).
-   *   Owning this policy here means no call site can forget it.
+   * 创建终端。
+   * @param cwd 显式覆盖目录。省略时使用默认 cwd 策略：
+   *   显式 cwd ?? 工作区根目录 ??（main 进程回退到 home 目录）。
+   *   将策略集中在这里，调用点就不会忘记处理 cwd。
    */
   createTerminal(cwd?: string): ITerminalInstance {
     const n = ++seq
     const id = `term-${n}`
-    // Title carries a stable ordinal so labels don't renumber when a terminal is killed
+    // 标题带稳定序号，关闭某个终端后其他终端标签不会重新编号
     const instance: ITerminalInstance = { id, title: `bash ${n}` }
     this._terminals = [...this._terminals, instance]
     this._activeId = id

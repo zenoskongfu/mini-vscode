@@ -6,9 +6,9 @@ import { ICommandService } from "../commands/commandService";
 export interface IKeybindingService {
 	readonly _serviceBrand: undefined;
 
-	/** Bind a normalized chord (e.g. "mod+shift+p") to a command id */
+	/** 将标准化后的按键和弦（如 "mod+shift+p"）绑定到命令 id */
 	registerKeybinding(chord: string, commandId: string): IDisposable;
-	/** Human-readable label for a command's keybinding, if any (for the palette) */
+	/** 命令快捷键的人类可读标签（若存在，供命令面板显示） */
 	lookupKeybinding(commandId: string): string | undefined;
 }
 
@@ -17,14 +17,14 @@ export const IKeybindingService = createDecorator<IKeybindingService>("keybindin
 const isMac = typeof navigator !== "undefined" && navigator.platform.toUpperCase().includes("MAC");
 
 /**
- * Convert a KeyboardEvent into a canonical chord string.
- * The primary modifier (Ctrl on Win/Linux, Cmd on macOS) is normalized to "mod"
- * so a single binding works cross-platform — VSCode's CommandOrControl concept.
+ * 将 KeyboardEvent 转换为标准按键和弦字符串。
+ * 主修饰键（Win/Linux 上的 Ctrl，macOS 上的 Cmd）会标准化为 "mod"，
+ * 让一份绑定跨平台生效，对应 VSCode 的 CommandOrControl 概念。
  */
 function eventToChord(e: KeyboardEvent): string {
 	const key = e.key.toLowerCase();
 	if (key === "control" || key === "meta" || key === "alt" || key === "shift") {
-		return ""; // modifier-only press
+		return ""; // 只有修饰键的按下事件
 	}
 	const parts: string[] = [];
 	if (e.ctrlKey || e.metaKey) parts.push("mod");
@@ -34,7 +34,7 @@ function eventToChord(e: KeyboardEvent): string {
 	return parts.join("+");
 }
 
-/** Render a chord as a platform-appropriate label, e.g. "⌘⇧P" / "Ctrl+Shift+P" */
+/** 将按键和弦渲染为符合平台习惯的标签，如 "⌘⇧P" / "Ctrl+Shift+P" */
 function chordToLabel(chord: string): string {
 	return chord
 		.split("+")
@@ -56,9 +56,9 @@ function chordToLabel(chord: string): string {
 }
 
 /**
- * KeybindingService — installs a single document keydown listener, normalizes
- * each event to a chord, and dispatches the bound command via ICommandService.
- * Mirrors VSCode's KeybindingService + KeybindingsRegistry.
+ * KeybindingService 安装一个全局 document keydown listener，
+ * 把每个事件标准化为按键和弦，再通过 ICommandService 分发绑定命令。
+ * 对应 VSCode 的 KeybindingService + KeybindingsRegistry。
  */
 export class KeybindingService extends Disposable implements IKeybindingService {
 	declare readonly _serviceBrand: undefined;
@@ -93,7 +93,7 @@ export class KeybindingService extends Disposable implements IKeybindingService 
 		if (!chord) return;
 		const commandId = this._chordToCommand.get(chord);
 		if (!commandId) return;
-		// A binding matched — take over from the browser/editor and run it.
+		// 匹配到绑定后，接管浏览器/编辑器默认行为并执行命令。
 		// 阻止自然行为
 		e.preventDefault();
 		// 阻止冒泡

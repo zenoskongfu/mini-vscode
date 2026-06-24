@@ -25,7 +25,7 @@ export interface GalleryItem {
   version: string
 }
 
-/** Merged view model for the Extensions sidebar */
+/** 扩展侧边栏使用的合并视图模型 */
 export interface ExtensionViewModel {
   id: string
   displayName: string
@@ -39,13 +39,13 @@ export interface ExtensionViewModel {
 export interface IExtensionService {
   readonly _serviceBrand: undefined
 
-  /** Fires when installed/enabled state changes */
+  /** 安装/启用状态变化时触发 */
   readonly onDidChangeExtensions: Event<void>
 
-  /** Connect to the ext host and register contributed commands — call once at startup */
+  /** 连接扩展宿主并注册扩展贡献的命令；启动时调用一次 */
   start(): Promise<void>
 
-  /** Gallery + installed + enabled, merged for the Extensions view */
+  /** gallery + 已安装 + 已启用状态，合并后供扩展视图使用 */
   getViewModels(): ExtensionViewModel[]
 
   install(id: string): Promise<void>
@@ -58,12 +58,11 @@ export const IExtensionService = createDecorator<IExtensionService>('extensionSe
 const DISABLED_KEY = 'extensions.disabled'
 
 /**
- * ExtensionService (renderer) — the "main thread" side of the ext-host RPC AND
- * the extension management surface for the Extensions view.
+ * ExtensionService（renderer）：既是 ext-host RPC 的“主线程”侧，
+ * 也是 Extensions 视图使用的扩展管理表面。
  *
- * Owns: the RPC connection, the installed extension descriptions, the disabled
- * set (persisted), and the per-extension command registrations (so disabling /
- * uninstalling can deregister cleanly).
+ * 它持有 RPC 连接、已安装扩展描述、禁用集合（持久化），
+ * 以及每个扩展的命令注册（这样禁用/卸载时可以干净注销）。
  */
 export class ExtensionService implements IExtensionService {
   declare readonly _serviceBrand: undefined
@@ -77,11 +76,11 @@ export class ExtensionService implements IExtensionService {
   private _gallery: GalleryItem[] = []
   private _installed: ExtensionDescription[] = []
   private _disabled = new Set<string>()
-  /** Cached merged view models — recomputed on change so getViewModels() is
-   *  referentially stable between changes (required by useSyncExternalStore). */
+  /** 缓存后的合并视图模型；只在变化时重算，确保 getViewModels()
+   *  在两次变化之间保持引用稳定（useSyncExternalStore 要求如此）。 */
   private _viewModels: ExtensionViewModel[] = []
 
-  /** id → disposables for that extension's registered commands */
+  /** id → 该扩展注册命令对应的 disposable 集合 */
   private readonly _commandDisposables = new Map<string, IDisposable[]>()
 
   constructor(
@@ -95,8 +94,8 @@ export class ExtensionService implements IExtensionService {
       this.storageService.getObject<string[]>(DISABLED_KEY, StorageScope.GLOBAL, [])
     )
 
-    // Load the gallery up front — works without the ext host, so the Extensions
-    // view renders immediately (and in browser preview, which has no port).
+    // 先加载 gallery；即使没有扩展宿主也能工作，因此 Extensions
+    // 视图可以立即渲染（浏览器预览没有端口，也能显示）。
     this._gallery = await window.electronAPI.extensions.listGallery()
     this._fireChange()
 
@@ -116,10 +115,10 @@ export class ExtensionService implements IExtensionService {
     )
     this._extHostCommands = rpc.getProxy<ExtHostCommandsShape>(ExtHostContext.ExtHostCommands)
 
-    // MainThread handlers the ext host calls into
+    // 供扩展宿主回调的 MainThread 处理器
     rpc.set<MainThreadCommandsShape>(MainContext.MainThreadCommands, {
       $registerCommand: () => {
-        /* handler now lives in the ext host; nothing to do on this side */
+        /* 处理器实际位于扩展宿主；renderer 侧无需额外处理 */
       },
       $executeCommand: (id, args) => this.commandService.executeCommand(id, ...args)
     })
@@ -129,7 +128,7 @@ export class ExtensionService implements IExtensionService {
       }
     })
 
-    // Now that the ext host is connected, load installed extensions
+    // 扩展宿主连接完成后，再加载已安装扩展
     await this._extHostExtensions.$setDisabledExtensions([...this._disabled])
     this._installed = await this._extHostExtensions.$getExtensions()
     this._reconcileCommands()
@@ -138,7 +137,7 @@ export class ExtensionService implements IExtensionService {
     this._fireChange()
   }
 
-  // ── Management ──────────────────────────────────────────────
+  // ── 管理操作 ──────────────────────────────────────────────
 
   getViewModels(): ExtensionViewModel[] {
     return this._viewModels
@@ -146,7 +145,7 @@ export class ExtensionService implements IExtensionService {
 
   private _recomputeViewModels(): void {
     const installedById = new Map(this._installed.map(e => [e.id, e]))
-    // Union of gallery ids and installed ids (an installed ext may not be in gallery)
+    // 合并 gallery id 与已安装 id（已安装扩展不一定仍在 gallery 中）
     const ids = new Set<string>([...this._gallery.map(g => g.id), ...installedById.keys()])
 
     this._viewModels = [...ids].map(id => {
@@ -191,7 +190,7 @@ export class ExtensionService implements IExtensionService {
     this._fireChange()
   }
 
-  // ── internals ───────────────────────────────────────────────
+  // ── 内部逻辑 ───────────────────────────────────────────────
 
   private async _refreshInstalled(): Promise<void> {
     this._installed = await this._extHostExtensions.$rescan()
@@ -199,16 +198,16 @@ export class ExtensionService implements IExtensionService {
     this._fireChange()
   }
 
-  /** Register commands for enabled+installed extensions, deregister the rest */
+  /** 为已安装且启用的扩展注册命令，并注销其他扩展的命令 */
   private _reconcileCommands(): void {
     const shouldHave = new Set(
       this._installed.filter(e => !this._disabled.has(e.id)).map(e => e.id)
     )
-    // Deregister extensions that are now disabled/uninstalled
+    // 注销当前已禁用/已卸载扩展的命令
     for (const id of [...this._commandDisposables.keys()]) {
       if (!shouldHave.has(id)) this._disposeCommands(id)
     }
-    // Register newly-enabled extensions
+    // 注册新启用扩展的命令
     for (const ext of this._installed) {
       if (shouldHave.has(ext.id) && !this._commandDisposables.has(ext.id)) {
         this._registerCommands(ext)
@@ -225,7 +224,7 @@ export class ExtensionService implements IExtensionService {
           title: cmd.title,
           category: cmd.category ?? ext.displayName ?? ext.name,
           handler: async (...args: unknown[]) => {
-            // Lazy activation, then run the real handler in the ext host
+            // 懒激活扩展，然后在扩展宿主中执行真正的处理器
             await this._extHostExtensions.$activateByEvent(`onCommand:${cmd.command}`)
             return this._extHostCommands.$executeContributedCommand(cmd.command, args)
           }

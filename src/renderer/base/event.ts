@@ -1,16 +1,16 @@
 import { IDisposable, toDisposable } from './lifecycle'
 
 /**
- * Event/Emitter — a trimmed-down version of VSCode's `vs/base/common/event.ts`.
+ * Event/Emitter：VSCode `vs/base/common/event.ts` 的精简版。
  *
- * An `Event<T>` is NOT an object — it's a *function* you call with a listener.
- * Calling it registers the listener and returns an IDisposable to unsubscribe:
+ * `Event<T>` 不是对象，而是一个接收 listener 的函数。
+ * 调用它会注册 listener，并返回一个 IDisposable 用于取消订阅：
  *
  *   const d = service.onDidChange(value => { ... })
- *   d.dispose() // stop listening
+ *   d.dispose() // 停止监听
  *
- * Producers own an `Emitter<T>`, fire it with `.fire(value)`, and expose the
- * read-only `.event` to consumers. This is the backbone of VSCode's reactivity.
+ * 生产者持有 `Emitter<T>`，通过 `.fire(value)` 触发事件，
+ * 并只把只读的 `.event` 暴露给消费者。这是 VSCode 响应式机制的骨架。
  */
 export type Event<T> = (listener: (e: T) => void) => IDisposable
 
@@ -18,7 +18,7 @@ export class Emitter<T> {
   private _listeners = new Set<(e: T) => void>()
   private _event?: Event<T>
 
-  /** The public Event consumers subscribe to */
+  /** 供消费者订阅的公开 Event */
   get event(): Event<T> {
     if (!this._event) {
       this._event = (listener: (e: T) => void): IDisposable => {
@@ -31,9 +31,9 @@ export class Emitter<T> {
     return this._event
   }
 
-  /** Notify all current listeners */
+  /** 通知当前所有监听器 */
   fire(event: T): void {
-    // Snapshot so a listener that unsubscribes mid-dispatch doesn't break iteration
+    // 先复制快照，避免 listener 在分发过程中取消订阅导致迭代出错
     for (const listener of [...this._listeners]) {
       listener(event)
     }

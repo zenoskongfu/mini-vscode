@@ -1,21 +1,20 @@
 /**
- * Lifecycle primitives — a trimmed-down version of VSCode's
- * `vs/base/common/lifecycle.ts`.
+ * 生命周期基础设施：VSCode `vs/base/common/lifecycle.ts` 的精简版。
  *
- * Anything that holds resources (event listeners, timers, child objects)
- * implements IDisposable so it can be torn down deterministically.
+ * 任何持有资源的对象（事件监听器、定时器、子对象）都实现 IDisposable，
+ * 这样就能被确定性地释放。
  */
 
 export interface IDisposable {
   dispose(): void
 }
 
-/** Wrap a teardown function as an IDisposable */
+/** 将清理函数包装成 IDisposable */
 export function toDisposable(fn: () => void): IDisposable {
   return { dispose: fn }
 }
 
-/** Dispose one disposable, or every disposable in an iterable */
+/** dispose 单个 disposable，或一个可迭代集合中的所有 disposable */
 export function dispose<T extends IDisposable>(disposable: T): T
 export function dispose<T extends IDisposable>(disposables: T[]): T[]
 export function dispose(arg: IDisposable | IDisposable[]): IDisposable | IDisposable[] {
@@ -28,8 +27,8 @@ export function dispose(arg: IDisposable | IDisposable[]): IDisposable | IDispos
 }
 
 /**
- * A bag of disposables that are all torn down together.
- * Add child disposables with `.add()`; calling `.dispose()` releases them all.
+ * 一组会被一起释放的 disposables。
+ * 通过 `.add()` 加入子 disposable；调用 `.dispose()` 会释放全部子项。
  */
 export class DisposableStore implements IDisposable {
   private readonly _toDispose = new Set<IDisposable>()
@@ -41,7 +40,7 @@ export class DisposableStore implements IDisposable {
 
   add<T extends IDisposable>(disposable: T): T {
     if (this._isDisposed) {
-      // Already disposed — dispose the newcomer immediately to avoid leaks
+      // store 已被 dispose；立即 dispose 新加入项以避免泄漏
       disposable.dispose()
       return disposable
     }
@@ -49,7 +48,7 @@ export class DisposableStore implements IDisposable {
     return disposable
   }
 
-  /** Dispose all current children but keep the store usable */
+  /** dispose 当前所有子项，但保留 store 可继续使用 */
   clear(): void {
     this._toDispose.forEach(d => d.dispose())
     this._toDispose.clear()
@@ -63,8 +62,8 @@ export class DisposableStore implements IDisposable {
 }
 
 /**
- * Base class for objects that own disposables.
- * Subclasses call `this._register(...)` to tie a child's lifetime to their own.
+ * 持有 disposable 的对象基类。
+ * 子类调用 `this._register(...)`，把子资源生命周期绑定到自身。
  */
 export abstract class Disposable implements IDisposable {
   protected readonly _store = new DisposableStore()

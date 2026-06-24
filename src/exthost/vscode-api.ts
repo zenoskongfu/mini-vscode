@@ -11,9 +11,9 @@ interface Disposable {
 }
 
 /**
- * Build the `vscode` API object injected into extensions.
- * Every call proxies across the RPC channel to a MainThread* handler in the
- * renderer — extensions never touch the workbench directly (process isolation).
+ * 构造注入到扩展中的 `vscode` API 对象。
+ * 每次调用都会通过 RPC 通道代理到 renderer 里的 MainThread* 处理器，
+ * 扩展永远不直接触碰 workbench（进程隔离）。
  */
 export function createVSCodeApi(
   rpc: RPCProtocol,
@@ -27,9 +27,9 @@ export function createVSCodeApi(
     commands: {
       registerCommand(id: string, handler: (...args: unknown[]) => unknown): Disposable {
         extHostCommands.registerCommand(extensionId, id, handler)
-        // Let the workbench know this contributed command now has a live handler
+        // 告诉 workbench：这个贡献命令现在已经有可调用的处理器
         mainCommands.$registerCommand(id)
-        // Local cleanup; RPC-side unregister ($unregisterCommand) lands in 12.1
+        // 本地清理；RPC 侧注销（$unregisterCommand）留到 12.1 实现
         return { dispose: () => extHostCommands.unregister(id) }
       },
       executeCommand(id: string, ...args: unknown[]): Promise<unknown> {
@@ -45,7 +45,7 @@ export function createVSCodeApi(
         mainMessage.$showMessage('error', message)
     },
     workspace: {
-      // Minimal placeholder namespace; grows as more MainThread* handlers land
+      // 最小占位命名空间；后续 MainThread* 处理器增加时再扩展
       getConfiguration: () => ({ get: () => undefined })
     }
   }

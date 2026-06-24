@@ -1,10 +1,9 @@
 /**
- * Captures the extension-host MessagePort as early as possible.
+ * 尽可能早地捕获扩展宿主 MessagePort。
  *
- * The preload re-posts the transferred port into the main world via
- * `window.postMessage('exthost:port', '*', [port])`. This module installs the
- * listener at import time (imported first in index.tsx) so the port is never
- * missed, and exposes it as a promise for the ExtensionService to await.
+ * preload 会通过 `window.postMessage('exthost:port', '*', [port])`
+ * 把转移过来的端口重新投递到主世界。本模块在导入时安装 listener
+ *（index.tsx 会最先导入它），避免错过端口，并以 Promise 形式暴露给 ExtensionService 等待。
  */
 let resolvePort: (port: MessagePort) => void
 export const extHostPortPromise = new Promise<MessagePort>(resolve => {

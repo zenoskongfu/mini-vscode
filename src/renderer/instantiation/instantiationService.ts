@@ -3,14 +3,12 @@ import { ServiceCollection } from "./serviceCollection";
 import { SyncDescriptor } from "./descriptors";
 
 /**
- * InstantiationService — trimmed-down port of VSCode's
- * `vs/platform/instantiation/common/instantiationService.ts`.
+ * InstantiationService：VSCode
+ * `vs/platform/instantiation/common/instantiationService.ts` 的精简移植版。
  *
- * - `createInstance(Ctor, ...staticArgs)` reads the constructor's recorded
- *   service dependencies and injects them, following VSCode's convention that
- *   service params are the *trailing* constructor parameters.
- * - `get(id)` returns the singleton, instantiating its SyncDescriptor lazily
- *   on first access.
+ * - `createInstance(Ctor, ...staticArgs)` 会读取构造函数记录的服务依赖并注入它们，
+ *   遵循 VSCode 的约定：服务参数位于构造函数参数末尾。
+ * - `get(id)` 返回单例，并在首次访问时懒实例化对应的 SyncDescriptor。
  */
 export class InstantiationService implements IInstantiationService {
 	declare readonly _serviceBrand: undefined;
@@ -28,7 +26,7 @@ export class InstantiationService implements IInstantiationService {
 			serviceArgs.push(this._getOrCreateServiceInstance(dependency.id));
 		}
 
-		// Services are trailing params: place static args first, then injected services.
+		// 服务参数位于末尾：先放静态参数，再追加注入服务。
 		const firstServiceArgPos = dependencies.length > 0 ? dependencies[0].index : staticArgs.length;
 		const args = staticArgs.slice(0, firstServiceArgPos);
 
@@ -47,7 +45,7 @@ export class InstantiationService implements IInstantiationService {
 		}
 
 		if (thing instanceof SyncDescriptor) {
-			// Lazily instantiate, then cache the instance back into the collection.
+			// 懒实例化后，把实例缓存回 service collection。
 			const instance = this.createInstance(thing.ctor as never, ...thing.staticArguments);
 			this._services.set(id, instance);
 			return instance;

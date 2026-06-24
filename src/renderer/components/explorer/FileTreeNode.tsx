@@ -23,8 +23,8 @@ export function FileTreeNode({ node, depth, onOpenFile, onRefreshParent }: FileT
 	const terminalService = useService(ITerminalService);
 	const layoutService = useService(ILayoutService);
 
-	// Open a terminal at `dir`, ensuring the panel is visible (else the new
-	// terminal would be created invisibly when the panel is hidden).
+	// 在 `dir` 打开终端，并确保面板可见（否则新终端会在
+	// 面板隐藏时被不可见地创建）。
 	const openInTerminal = useCallback(
 		(dir: string): void => {
 			layoutService.setPanelVisible(true);
@@ -33,7 +33,7 @@ export function FileTreeNode({ node, depth, onOpenFile, onRefreshParent }: FileT
 		[layoutService, terminalService]
 	);
 
-	// Focus rename input when it appears
+	// 重命名输入框出现时聚焦
 	useEffect(() => {
 		if (renaming) {
 			renameInputRef.current?.focus();
@@ -55,7 +55,7 @@ export function FileTreeNode({ node, depth, onOpenFile, onRefreshParent }: FileT
 		setContextMenu({ x: e.clientX, y: e.clientY });
 	}, []);
 
-	// ── File operations ──────────────────────────────────────────
+	// ── 文件操作 ──────────────────────────────────────────
 
 	const handleNewFile = useCallback(async (): Promise<void> => {
 		const name = "untitled";
@@ -100,7 +100,7 @@ export function FileTreeNode({ node, depth, onOpenFile, onRefreshParent }: FileT
 		}
 	}, [node, onRefreshParent]);
 
-	// ── Context menu items ───────────────────────────────────────
+	// ── 上下文菜单项 ───────────────────────────────────────
 
 	const menuItems: ContextMenuEntry[] = node.isDirectory
 		? [
@@ -132,9 +132,9 @@ export function FileTreeNode({ node, depth, onOpenFile, onRefreshParent }: FileT
 				},
 		  ];
 
-	// ── Render ───────────────────────────────────────────────────
+	// ── 渲染 ───────────────────────────────────────────────────
 
-	const indent = depth * 12 + 8; // 12px per level + 8px base padding
+	const indent = depth * 12 + 8; // 每层 12px + 8px 基础 padding
 
 	return (
 		<div className='file-tree-node'>
@@ -144,17 +144,17 @@ export function FileTreeNode({ node, depth, onOpenFile, onRefreshParent }: FileT
 				onClick={handleClick}
 				onContextMenu={handleContextMenu}
 				title={node.path}>
-				{/* Expand/collapse arrow for directories */}
+				{/* 目录展开/收起箭头 */}
 				<span className={`file-tree-node__arrow ${node.isDirectory ? "" : "file-tree-node__arrow--hidden"}`}>
 					{node.isDirectory && (expanded ? <ArrowDownIcon /> : <ArrowRightIcon />)}
 				</span>
 
-				{/* File/folder icon */}
+				{/* 文件/文件夹图标 */}
 				<span className='file-tree-node__icon'>
 					{node.isDirectory ? expanded ? <FolderOpenIcon /> : <FolderIcon /> : <FileIcon name={node.name} />}
 				</span>
 
-				{/* Name — or inline rename input */}
+				{/* 名称，或内联重命名输入框 */}
 				{renaming ? (
 					<input
 						ref={renameInputRef}
@@ -173,10 +173,10 @@ export function FileTreeNode({ node, depth, onOpenFile, onRefreshParent }: FileT
 				)}
 			</div>
 
-			{/* Recursive children */}
+			{/* 递归子节点 */}
 			{node.isDirectory && expanded && <FileTree dirPath={node.path} depth={depth + 1} onOpenFile={onOpenFile} />}
 
-			{/* Context menu portal */}
+			{/* 上下文菜单 portal */}
 			{contextMenu && (
 				<ContextMenu
 					x={contextMenu.x}
@@ -189,7 +189,7 @@ export function FileTreeNode({ node, depth, onOpenFile, onRefreshParent }: FileT
 	);
 }
 
-// ── Inline SVG icons ─────────────────────────────────────────
+// ── 内联 SVG 图标 ─────────────────────────────────────────
 
 function ArrowRightIcon(): React.JSX.Element {
 	return (
@@ -227,7 +227,7 @@ function FolderOpenIcon(): React.JSX.Element {
 	);
 }
 
-/** Color-coded file icon based on extension */
+/** 根据扩展名显示不同颜色的文件图标 */
 function FileIcon({ name }: { name: string }): React.JSX.Element {
 	const ext = name.split(".").pop()?.toLowerCase() ?? "";
 	const color = FILE_COLORS[ext] ?? "#cccccc";

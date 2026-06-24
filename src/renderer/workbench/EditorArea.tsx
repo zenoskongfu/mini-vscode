@@ -13,8 +13,8 @@ interface EditorAreaProps {
 }
 
 /**
- * Editor area: tab strip + breadcrumbs + Monaco editor.
- * Reads open tabs from IEditorService and re-renders on its events.
+ * 编辑器区域：标签栏 + 面包屑 + Monaco 编辑器。
+ * 从 IEditorService 读取已打开标签页，并随其事件重新渲染。
  */
 export function EditorArea({ className = "", onCursorChange }: EditorAreaProps): React.JSX.Element {
 	const editorService = useService(IEditorService);

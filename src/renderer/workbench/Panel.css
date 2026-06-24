@@ -7,7 +7,7 @@
   min-height: 0;
 }
 
-/* Tab strip */
+/* 标签栏 */
 .panel__tabs {
   display: flex;
   align-items: center;
@@ -59,7 +59,7 @@
   font-weight: 700;
 }
 
-/* Content area */
+/* 内容区域 */
 .panel__content {
   flex: 1;
   overflow: hidden;
@@ -86,7 +86,7 @@
   position: relative;
 }
 
-/* ── Terminal toolbar ── */
+/* ── 终端工具栏 ── */
 .terminal-toolbar {
   display: flex;
   align-items: center;

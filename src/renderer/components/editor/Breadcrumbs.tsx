@@ -9,14 +9,14 @@ interface BreadcrumbsProps {
 }
 
 /**
- * Path breadcrumb shown above the editor.
- * Shows the file path relative to the workspace root, segment by segment.
+ * 显示在编辑器上方的路径面包屑。
+ * 按路径片段展示当前文件相对于工作区根目录的位置。
  */
 export function Breadcrumbs({ filePath }: BreadcrumbsProps): React.JSX.Element {
   const workspaceService = useService(IWorkspaceService)
   const root = useEvent(workspaceService.onDidChangeRoot, () => workspaceService.root)
 
-  // Display path relative to workspace root when possible
+  // 尽可能显示相对于工作区根目录的路径
   let relative = filePath
   if (root && filePath.startsWith(root)) {
     relative = filePath.slice(root.length).replace(/^\//, '')

@@ -6,7 +6,7 @@
   overflow: hidden;
 }
 
-/* Let xterm's viewport fill the container */
+/* 让 xterm 的 viewport 填满容器 */
 .terminal-view .xterm {
   height: 100%;
 }

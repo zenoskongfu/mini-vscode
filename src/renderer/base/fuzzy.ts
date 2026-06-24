@@ -1,11 +1,10 @@
 /**
- * Lightweight subsequence fuzzy matcher.
- * Returns a score (higher = better) and the matched character indices for
- * highlighting, or null if `query` is not a subsequence of `target`.
+ * 轻量级子序列模糊匹配器。
+ * 返回分数（越高越好）和用于高亮的命中字符索引；
+ * 如果 `query` 不是 `target` 的子序列，则返回 null。
  *
- * Scoring rewards: consecutive matches, matches at word boundaries, and
- * matches near the start — enough to feel like VSCode's quick-open ordering
- * without pulling in a dependency.
+ * 评分会奖励连续匹配、单词边界匹配、以及更靠前的匹配，
+ * 足以接近 VSCode quick-open 的排序手感，同时避免引入额外依赖。
  */
 export interface FuzzyMatch {
   score: number
@@ -28,15 +27,15 @@ export function fuzzyMatch(query: string, target: string): FuzzyMatch | null {
 
     indices.push(ti)
 
-    // Base point per matched char
+    // 每个匹配字符的基础分
     let charScore = 1
-    // Consecutive match bonus
+    // 连续匹配加分
     if (prevMatchIdx === ti - 1) charScore += 5
-    // Start-of-string / word-boundary bonus
+    // 字符串开头/单词边界加分
     if (ti === 0 || target[ti - 1] === ' ' || target[ti - 1] === ':' || target[ti - 1] === '.') {
       charScore += 8
     }
-    // Earlier matches are slightly better
+    // 更靠前的匹配略微加分
     charScore += Math.max(0, 3 - ti * 0.1)
 
     score += charScore
@@ -44,6 +43,6 @@ export function fuzzyMatch(query: string, target: string): FuzzyMatch | null {
     qi++
   }
 
-  // All query characters must have matched
+  // query 中所有字符都必须命中
   return qi === q.length ? { score, indices } : null
 }

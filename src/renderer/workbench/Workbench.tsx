@@ -16,19 +16,19 @@ import { IEditorService } from '../services/editor/editorService'
 import './Workbench.css'
 
 /**
- * The main workbench shell.
+ * 主 workbench 外壳。
  *
- * Layout:
- *   TitleBar                          (fixed top)
+ * 布局：
+ *   TitleBar                          （顶部固定）
  *   ┌────┬─────────────────────────┐
- *   │ AB │  Allotment (horizontal) │  AB = ActivityBar (fixed 48px)
- *   │    │  [Sidebar | center]     │  center = Allotment (vertical)
+ *   │ AB │  Allotment（水平）       │  AB = ActivityBar（固定 48px）
+ *   │    │  [Sidebar | center]     │  center = Allotment（垂直）
  *   │    │            [Editor|Panel]│           [EditorArea | Panel]
  *   └────┴─────────────────────────┘
- *   StatusBar                         (fixed bottom)
+ *   StatusBar                         （底部固定）
  *
- * Pane sizes are managed by Allotment (drag the sashes). Visibility toggles
- * collapse a pane via Allotment.Pane's `visible` prop.
+ * pane 尺寸由 Allotment 管理（拖动分隔条）。可见性切换会通过
+ * Allotment.Pane 的 `visible` prop 折叠对应 pane。
  */
 export function Workbench(): React.JSX.Element {
   const layoutService = useService(ILayoutService)
@@ -47,9 +47,9 @@ export function Workbench(): React.JSX.Element {
     () => layoutService.activeView
   )
 
-  // Allotment lays out correctly only when panes start visible, then toggle.
-  // So the first render keeps panes visible; a layout effect (pre-paint, no
-  // flash) flips `mounted`, after which restored/persisted visibility applies.
+  // Allotment 只有在 pane 初始可见、随后再切换时才能正确测量布局。
+  // 因此首轮 render 先保持 pane 可见；随后 layout effect（绘制前执行，
+  // 不会闪烁）翻转 `mounted`，再应用恢复/持久化的可见状态。
   const [mounted, setMounted] = useState(false)
   useLayoutEffect(() => setMounted(true), [])
   const sidebarVisible = mounted ? restoredSidebarVisible : true
@@ -68,7 +68,7 @@ export function Workbench(): React.JSX.Element {
           onTogglePanel={() => layoutService.togglePanel()}
         />
 
-        {/* Horizontal split: Sidebar | center */}
+        {/* 水平切分：Sidebar | 中心区域 */}
         <Allotment proportionalLayout={false} className="workbench__allotment">
           <Allotment.Pane
             preferredSize={240}
@@ -85,7 +85,7 @@ export function Workbench(): React.JSX.Element {
           </Allotment.Pane>
 
           <Allotment.Pane>
-            {/* Vertical split: EditorArea | Panel */}
+            {/* 垂直切分：EditorArea | Panel */}
             <Allotment vertical proportionalLayout={false}>
               <Allotment.Pane minSize={100}>
                 <EditorArea
@@ -104,7 +104,7 @@ export function Workbench(): React.JSX.Element {
 
       <StatusBar className="workbench__statusbar" />
 
-      {/* Overlays */}
+      {/* 覆盖层 */}
       <CommandPalette />
       <NotificationToasts />
     </div>

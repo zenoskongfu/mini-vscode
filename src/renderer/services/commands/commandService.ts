@@ -3,7 +3,7 @@ import { registerSingleton } from '../../instantiation/extensions'
 import { Emitter, Event } from '../../base/event'
 import { IDisposable, toDisposable } from '../../base/lifecycle'
 
-/** A command — id + display metadata + handler (VSCode CommandsRegistry analog) */
+/** 一个命令：id + 展示元数据 + 处理器（对应 VSCode CommandsRegistry） */
 export interface ICommand {
   id: string
   title: string
@@ -14,7 +14,7 @@ export interface ICommand {
 export interface ICommandService {
   readonly _serviceBrand: undefined
 
-  /** Fires when a command is registered (palette listens to refresh) */
+  /** 命令注册时触发（命令面板会监听它来刷新） */
   readonly onDidRegisterCommand: Event<string>
 
   registerCommand(command: ICommand): IDisposable
@@ -26,9 +26,9 @@ export interface ICommandService {
 export const ICommandService = createDecorator<ICommandService>('commandService')
 
 /**
- * CommandService — central registry that maps command ids to handlers,
- * mirroring VSCode's CommandsRegistry + ICommandService. Both the Command
- * Palette and the KeybindingService dispatch through executeCommand().
+ * CommandService：command id 到 handler 的中心注册表，
+ * 对应 VSCode 的 CommandsRegistry + ICommandService。
+ * 命令面板和 KeybindingService 都通过 executeCommand() 分发。
  */
 export class CommandService implements ICommandService {
   declare readonly _serviceBrand: undefined

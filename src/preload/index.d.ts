@@ -1,5 +1,5 @@
-// Type declaration for window.electronAPI injected by preload script
-// This file is referenced by tsconfig.web.json so the renderer gets full type safety.
+// preload 脚本注入的 window.electronAPI 类型声明
+// 该文件由 tsconfig.web.json 引用，让 renderer 侧获得完整类型检查。
 
 export interface ElectronAPI {
   window: {

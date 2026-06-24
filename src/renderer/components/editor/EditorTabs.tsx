@@ -10,8 +10,8 @@ interface EditorTabsProps {
 }
 
 /**
- * Horizontal strip of open editor tabs.
- * Each tab shows: file icon, name, and a close button (or a dirty dot when modified).
+ * 已打开编辑器标签页的水平列表。
+ * 每个标签展示：文件图标、名称，以及关闭按钮（修改后显示 dirty 圆点）。
  */
 export function EditorTabs({
   tabs,
@@ -31,7 +31,7 @@ export function EditorTabs({
             className={`editor-tab ${active ? 'editor-tab--active' : ''}`}
             onClick={() => onActivate(tab.path)}
             onMouseDown={e => {
-              // middle-click closes
+              // 鼠标中键关闭
               if (e.button === 1) { e.preventDefault(); onClose(tab.path) }
             }}
             title={tab.path}

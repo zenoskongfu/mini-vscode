@@ -1,4 +1,4 @@
-/** A node in the workspace file tree */
+/** 工作区文件树中的一个节点 */
 export interface FileNode {
   name: string
   path: string
@@ -6,7 +6,7 @@ export interface FileNode {
   children?: FileNode[]
 }
 
-/** Event pushed by main when chokidar detects a change */
+/** chokidar 检测到变化后由 main 推送的事件 */
 export interface FileChangeEvent {
   type: 'add' | 'addDir' | 'change' | 'unlink' | 'unlinkDir'
   path: string

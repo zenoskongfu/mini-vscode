@@ -12,12 +12,12 @@ export interface GalleryItem {
 }
 
 /**
- * ExtensionManagementService (main) — the file-system side of extension
- * install/uninstall, VSCode's IExtensionManagementService analog.
+ * ExtensionManagementService（main）负责扩展安装/卸载中的文件系统部分，
+ * 对应 VSCode 的 IExtensionManagementService。
  *
- * - The "marketplace" is a local `gallery/` dir of ready-to-install extensions.
- * - Installing copies `gallery/<id>` → `extensions/<id>` (like unpacking a VSIX).
- * - Uninstalling removes `extensions/<id>`.
+ * - “市场”是本地的 gallery/ 目录，里面放着可安装扩展。
+ * - 安装时复制 gallery/<id> → extensions/<id>（类似解包 VSIX）。
+ * - 卸载时删除 extensions/<id>。
  */
 export class ExtensionManagementService {
   private readonly galleryDir = path.join(app.getAppPath(), 'gallery')
@@ -44,7 +44,7 @@ export class ExtensionManagementService {
           version: m.version ?? '0.0.0'
         })
       } catch {
-        // skip malformed manifest
+        // 跳过格式错误的 manifest
       }
     }
     return items
