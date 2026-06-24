@@ -7,6 +7,7 @@ import { IWorkspaceService } from './services/workspace/workspaceService'
 import { IKeybindingService } from './services/keybinding/keybindingService'
 import { IConfigurationService } from './services/configuration/configurationService'
 import { IThemeService } from './services/theme/themeService'
+import { IExtensionService } from './services/extensions/extensionService'
 import { registerWorkbenchContributions } from './workbench/contrib/registerContributions'
 
 /**
@@ -36,6 +37,8 @@ export default function App(): React.JSX.Element {
     config.initialize().then(() => {
       instantiationService.get(IThemeService).initialize()
     })
+    // Connect to the extension host (no-op in browser preview — no port arrives)
+    instantiationService.get(IExtensionService).start()
   }, [instantiationService])
 
   return (

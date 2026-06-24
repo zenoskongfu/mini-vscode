@@ -1,5 +1,6 @@
 import React from 'react'
 import { FileExplorer } from '../components/explorer/FileExplorer'
+import { ExtensionsView } from '../components/extensions/ExtensionsView'
 import './Sidebar.css'
 
 interface SidebarProps {
@@ -25,6 +26,8 @@ export function Sidebar({ className = '', activeView, onOpenFile }: SidebarProps
       <div className="sidebar__content">
         {activeView === 'explorer' ? (
           <FileExplorer onOpenFile={onOpenFile} />
+        ) : activeView === 'extensions' ? (
+          <ExtensionsView />
         ) : (
           <SidebarPlaceholder view={activeView} />
         )}

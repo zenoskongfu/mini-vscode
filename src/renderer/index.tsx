@@ -2,6 +2,9 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './app'
 import './styles/globals.css'
+// Import first so the ext-host MessagePort listener is installed before anything
+// else can post it (avoids missing the handoff).
+import './platform/extHostPort'
 import { injectElectronAPIMock } from './mocks/electron-api-mock'
 import { setupMonaco } from './services/monaco-setup'
 

@@ -8,7 +8,10 @@ export default defineConfig({
     build: {
       rollupOptions: {
         input: {
-          index: resolve(__dirname, 'src/main/index.ts')
+          index: resolve(__dirname, 'src/main/index.ts'),
+          // Extension host runs in a utilityProcess; built as a separate entry
+          // → out/main/extensionHost.js (forked by ExtensionHost.start()).
+          extensionHost: resolve(__dirname, 'src/exthost/extensionHostMain.ts')
         }
       }
     }

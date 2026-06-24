@@ -1,0 +1,16 @@
+{
+  "name": "hello-world",
+  "displayName": "Hello World",
+  "version": "0.0.1",
+  "main": "./extension.js",
+  "activationEvents": ["onCommand:hello-world.helloWorld"],
+  "contributes": {
+    "commands": [
+      {
+        "command": "hello-world.helloWorld",
+        "title": "Hello World",
+        "category": "Hello"
+      }
+    ]
+  }
+}

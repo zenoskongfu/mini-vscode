@@ -97,5 +97,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
     openFile: () => ipcRenderer.invoke('dialog:openFile'),
     showMessage: (options: unknown) =>
       ipcRenderer.invoke('dialog:showMessage', options)
+  },
+
+  // Extension management (gallery install/uninstall) — Phase 6.6
+  extensions: {
+    listGallery: () => ipcRenderer.invoke('ext:listGallery'),
+    install: (id: string) => ipcRenderer.invoke('ext:install', id),
+    uninstall: (id: string) => ipcRenderer.invoke('ext:uninstall', id)
   }
+})
+
+/**
+ * Extension-host port handoff.
+ * Main sends the renderer's end of the ext-host MessageChannel via
+ * webContents.postMessage → arrives here with `event.ports`. We can't pass a
+ * MessagePort across contextBridge, so re-post it into the main world; the
+ * renderer listens for `window.onmessage` with data === 'exthost:port'.
+ */
+ipcRenderer.on('exthost:port', e => {
+  window.postMessage('exthost:port', '*', e.ports)
 })

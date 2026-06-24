@@ -14,6 +14,8 @@ import '../services/quickinput/quickInputService'
 import '../services/terminal/terminalService'
 import '../services/configuration/configurationService'
 import '../services/theme/themeService'
+import '../services/notification/notificationService'
+import '../services/extensions/extensionService'
 
 /**
  * Build the root InstantiationService from all registered singletons.

@@ -52,6 +52,13 @@ export interface ElectronAPI {
     openFile: () => Promise<string | null>
     showMessage: (options: unknown) => Promise<number>
   }
+  extensions: {
+    listGallery: () => Promise<
+      { id: string; displayName: string; description: string; publisher: string; version: string }[]
+    >
+    install: (id: string) => Promise<void>
+    uninstall: (id: string) => Promise<void>
+  }
 }
 
 declare global {

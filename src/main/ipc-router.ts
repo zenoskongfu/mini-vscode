@@ -3,6 +3,7 @@ import { WindowManager } from './window-manager'
 import { FileSystemService } from './services/file-system-service'
 import { TerminalService } from './services/terminal-service'
 import { ConfigService } from './services/config-service'
+import { ExtensionManagementService } from './extensions/extensionManagementService'
 
 export const IPC_CHANNELS = {
   FS_READ_DIR: 'fs:readDir',
@@ -29,6 +30,9 @@ export const IPC_CHANNELS = {
   CONFIG_GET: 'config:get',
   CONFIG_SET: 'config:set',
   CONFIG_GET_PATH: 'config:getPath',
+  EXT_LIST_GALLERY: 'ext:listGallery',
+  EXT_INSTALL: 'ext:install',
+  EXT_UNINSTALL: 'ext:uninstall',
   DIALOG_OPEN_FOLDER: 'dialog:openFolder',
   DIALOG_OPEN_FILE: 'dialog:openFile',
   DIALOG_SHOW_MESSAGE: 'dialog:showMessage',
@@ -42,6 +46,7 @@ export class IPCRouter {
   private fsService = new FileSystemService()
   private terminalService = new TerminalService()
   private configService = new ConfigService()
+  private extManagementService = new ExtensionManagementService()
 
   constructor(private windowManager: WindowManager) {}
 
@@ -51,6 +56,15 @@ export class IPCRouter {
     this.registerDialogHandlers()
     this.registerTerminalHandlers()
     this.registerConfigHandlers()
+    this.registerExtensionHandlers()
+  }
+
+  private registerExtensionHandlers(): void {
+    ipcMain.handle(IPC_CHANNELS.EXT_LIST_GALLERY, () => this.extManagementService.listGallery())
+    ipcMain.handle(IPC_CHANNELS.EXT_INSTALL, (_e, id: string) => this.extManagementService.install(id))
+    ipcMain.handle(IPC_CHANNELS.EXT_UNINSTALL, (_e, id: string) =>
+      this.extManagementService.uninstall(id)
+    )
   }
 
   private registerConfigHandlers(): void {

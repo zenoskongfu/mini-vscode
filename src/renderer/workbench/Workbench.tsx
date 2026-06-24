@@ -8,6 +8,7 @@ import { EditorArea } from './EditorArea'
 import { Panel } from './Panel'
 import { StatusBar } from './StatusBar'
 import { CommandPalette } from '../components/command-palette/CommandPalette'
+import { NotificationToasts } from '../components/notifications/NotificationToast'
 import { useService } from '../platform/ServicesContext'
 import { useEvent } from '../platform/useEvent'
 import { ILayoutService, type ActivityView } from '../services/layout/layoutService'
@@ -105,6 +106,7 @@ export function Workbench(): React.JSX.Element {
 
       {/* Overlays */}
       <CommandPalette />
+      <NotificationToasts />
     </div>
   )
 }

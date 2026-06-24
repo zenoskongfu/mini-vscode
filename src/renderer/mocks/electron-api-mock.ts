@@ -137,6 +137,15 @@ export function injectElectronAPIMock(): void {
       openFolder: () => Promise.resolve(FAKE_ROOT),
       openFile: () => Promise.resolve(null),
       showMessage: () => Promise.resolve(0)
+    },
+    extensions: {
+      listGallery: () => Promise.resolve([
+        { id: 'word-count', displayName: 'Word Count', description: 'Shows a (mock) word count for the active document.', publisher: 'mini-vscode', version: '1.0.0' },
+        { id: 'insert-date', displayName: 'Insert Date', description: 'Adds a command that reports the current date/time.', publisher: 'mini-vscode', version: '1.2.0' },
+        { id: 'emoji-log', displayName: 'Emoji Log', description: 'A cheerful command that says hello with emoji.', publisher: 'mini-vscode', version: '0.3.1' }
+      ]),
+      install: noop,
+      uninstall: noop
     }
   }
 
