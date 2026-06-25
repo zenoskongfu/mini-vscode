@@ -2,6 +2,12 @@ import React, { useState, useEffect } from "react";
 import { useService } from "../platform/ServicesContext";
 import { useEvent } from "../platform/useEvent";
 import { ITerminalService } from "../services/terminal/terminalService";
+import {
+	IDiagnosticsService,
+	type IDiagnosticItem,
+	type DiagnosticSeverity,
+} from "../services/diagnostics/diagnosticsService";
+import { IEditorService } from "../services/editor/editorService";
 import { TerminalView } from "../components/terminal/TerminalView";
 import "./Panel.css";
 
@@ -18,9 +24,13 @@ type PanelTab = "terminal" | "problems" | "output";
 export function Panel({ className = "" }: PanelProps): React.JSX.Element {
 	const [activeTab, setActiveTab] = useState<PanelTab>("terminal");
 
+	// 实时诊断数量（驱动 PROBLEMS 标签徽标）
+	const diagnostics = useService(IDiagnosticsService);
+	const counts = useEvent(diagnostics.onDidChangeDiagnostics, () => diagnostics.getCounts());
+
 	const tabs: { id: PanelTab; label: string; badge?: number }[] = [
 		{ id: "terminal", label: "TERMINAL" },
-		{ id: "problems", label: "PROBLEMS", badge: 0 },
+		{ id: "problems", label: "PROBLEMS", badge: counts.total },
 		{ id: "output", label: "OUTPUT" },
 	];
 
@@ -48,11 +58,7 @@ export function Panel({ className = "" }: PanelProps): React.JSX.Element {
 					<TerminalPane active={activeTab === "terminal"} />
 				</div>
 
-				{activeTab === "problems" && (
-					<div className='panel-placeholder'>
-						<span className='panel-placeholder__text'>No problems detected.</span>
-					</div>
-				)}
+				{activeTab === "problems" && <ProblemsPane />}
 				{activeTab === "output" && (
 					<div className='panel-placeholder'>
 						<span className='panel-placeholder__text'>Output channel — available in Phase 9</span>
@@ -61,6 +67,56 @@ export function Panel({ className = "" }: PanelProps): React.JSX.Element {
 			</div>
 		</div>
 	);
+}
+
+/**
+ * Problems 面板（Phase 13.1）：汇总 Monaco markers（内置 TS/JS 诊断等），
+ * 点击一条跳转到对应文件的行列。
+ */
+function ProblemsPane(): React.JSX.Element {
+	const diagnostics = useService(IDiagnosticsService);
+	const editorService = useService(IEditorService);
+	const problems = useEvent(diagnostics.onDidChangeDiagnostics, () => diagnostics.getProblems());
+
+	if (problems.length === 0) {
+		return (
+			<div className='panel-placeholder'>
+				<span className='panel-placeholder__text'>No problems detected.</span>
+			</div>
+		);
+	}
+
+	return (
+		<div className='problems-list'>
+			{problems.map((p, i) => (
+				<button
+					key={`${p.path}:${p.line}:${p.column}:${i}`}
+					className='problems-item'
+					title={p.message}
+					onClick={() => editorService.revealPosition(p.path, p.line, p.column)}>
+					<span className='problems-item__icon' style={{ color: severityColor(p.severity) }}>
+						{severityGlyph(p.severity)}
+					</span>
+					<span className='problems-item__message'>{p.message}</span>
+					<span className='problems-item__location'>
+						{p.fileName} [{p.line}:{p.column}]
+					</span>
+				</button>
+			))}
+		</div>
+	);
+}
+
+function severityGlyph(s: DiagnosticSeverity): string {
+	return s === "error" ? "✖" : s === "warning" ? "⚠" : s === "info" ? "ⓘ" : "·";
+}
+
+function severityColor(s: DiagnosticSeverity): string {
+	return s === "error"
+		? "var(--color-error)"
+		: s === "warning"
+			? "var(--color-warning)"
+			: "var(--color-info)";
 }
 
 /**

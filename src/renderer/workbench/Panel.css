@@ -169,3 +169,47 @@
   font-family: var(--font-family-mono);
   font-size: var(--font-size-small);
 }
+
+/* ── Problems 面板 ── */
+.problems-list {
+  height: 100%;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+
+.problems-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 2px 12px;
+  border: none;
+  background: transparent;
+  color: var(--color-fg-default);
+  font-size: var(--font-size-small);
+  text-align: left;
+  cursor: pointer;
+}
+
+.problems-item:hover {
+  background: var(--color-bg-hover);
+}
+
+.problems-item__icon {
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+}
+
+.problems-item__message {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.problems-item__location {
+  flex-shrink: 0;
+  color: var(--color-fg-muted);
+  font-family: var(--font-family-mono);
+}

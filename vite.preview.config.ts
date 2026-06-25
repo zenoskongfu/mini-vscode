@@ -26,7 +26,13 @@ export default defineConfig({
       'allotment',
       '@xterm/xterm',
       '@xterm/addon-fit'
-    ]
+    ],
+    // optimizeDeps 的依赖扫描器用独立 esbuild 实例，不读上面的 esbuild.tsconfigRaw，
+    // 因此必须单独指向带 experimentalDecorators 的 tsconfig，否则扫到 DI 参数装饰器会报错。
+    // （与 electron.vite.config.ts 保持一致；两个旋钮缺一不可。）
+    esbuildOptions: {
+      tsconfig: resolve(__dirname, 'tsconfig.web.json')
+    }
   },
   // 对齐 Electron renderer 构建：为 DI 启用旧版参数装饰器
   esbuild: {

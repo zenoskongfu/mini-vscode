@@ -12,6 +12,8 @@ import {
 	type MainThreadMessageShape,
 } from "../platform/rpc/proxyIdentifiers";
 import { ExtHostCommands } from "./extHostCommands";
+import { ExtHostDocuments } from "./extHostDocuments";
+import { ExtHostLanguageFeatures } from "./extHostLanguageFeatures";
 import { createVSCodeApi } from "./vscode-api";
 
 /**
@@ -69,7 +71,8 @@ class ExtHostExtensionService implements ExtHostExtensionServiceShape {
 	constructor(
 		private readonly extensionsDir: string,
 		private readonly rpc: RPCProtocol,
-		private readonly extHostCommands: ExtHostCommands
+		private readonly extHostCommands: ExtHostCommands,
+		private readonly extHostLanguageFeatures: ExtHostLanguageFeatures
 	) {
 		this._mainCommands = rpc.getProxy<MainThreadCommandsShape>(MainContext.MainThreadCommands);
 		this._mainExtensions = rpc.getProxy<MainThreadExtensionServiceShape>(
@@ -153,7 +156,10 @@ class ExtHostExtensionService implements ExtHostExtensionServiceShape {
 			if (ext.main) {
 				// 先绑定该扩展专属的 `vscode` API，再加载模块：它的
 				// 顶层 require('vscode') 会解析到这个扩展自己的 API。
-				extensionApis.set(ext.id, createVSCodeApi(this.rpc, this.extHostCommands, ext.id));
+				extensionApis.set(
+					ext.id,
+					createVSCodeApi(this.rpc, this.extHostCommands, this.extHostLanguageFeatures, ext.id)
+				);
 				currentExtensionId = ext.id;
 				const req = createRequire(path.join(ext.extensionPath, "package.json"));
 				mod = req(ext.main) as ActivationRecord["module"];
@@ -207,6 +213,8 @@ class ExtHostExtensionService implements ExtHostExtensionServiceShape {
 		for (const cmdId of this.extHostCommands.unregisterByExtension(id)) {
 			this._mainCommands.$unregisterCommand(cmdId);
 		}
+		// 3b. 反注册该扩展注册的所有语言特性 provider
+		this.extHostLanguageFeatures.unregisterByExtension(id);
 
 		// 4. 清模块缓存（仅该扩展自身路径下的文件，不动外部依赖）
 		const prefix = record?.context.extensionPath ?? this._extensions.find((e) => e.id === id)?.extensionPath;
@@ -249,8 +257,18 @@ parentPort.once("message", (e) => {
 	const rpc = new RPCProtocol(protocol);
 
 	const extHostCommands = rpc.set(ExtHostContext.ExtHostCommands, new ExtHostCommands());
+	const extHostDocuments = rpc.set(ExtHostContext.ExtHostDocuments, new ExtHostDocuments());
+	const extHostLanguageFeatures = rpc.set(
+		ExtHostContext.ExtHostLanguageFeatures,
+		new ExtHostLanguageFeatures(rpc, extHostDocuments)
+	);
 
-	const extService = new ExtHostExtensionService(init.extensionsDir, rpc, extHostCommands);
+	const extService = new ExtHostExtensionService(
+		init.extensionsDir,
+		rpc,
+		extHostCommands,
+		extHostLanguageFeatures
+	);
 	rpc.set(ExtHostContext.ExtHostExtensionService, extService);
 	extService.scan();
 

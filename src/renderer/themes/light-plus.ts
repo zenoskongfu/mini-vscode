@@ -61,5 +61,23 @@ export const lightPlus: ThemeDefinition = {
 
     '--color-scrollbar-thumb': 'rgba(100,100,100,0.4)',
     '--color-scrollbar-thumb-hover': 'rgba(100,100,100,0.7)'
-  }
+  },
+  // 近似 VSCode Light+ 的语法/语义着色
+  tokenRules: [
+    { token: 'comment', foreground: '#008000', fontStyle: 'italic' },
+    { token: 'string', foreground: '#a31515' },
+    { token: 'keyword', foreground: '#0000ff' },
+    { token: 'number', foreground: '#098658' },
+    { token: 'regexp', foreground: '#811f3f' },
+    { token: 'operator', foreground: '#000000' },
+    { token: 'type', foreground: '#267f99' },
+    { token: 'class', foreground: '#267f99' },
+    { token: 'interface', foreground: '#267f99' },
+    { token: 'enum', foreground: '#267f99' },
+    { token: 'namespace', foreground: '#267f99' },
+    { token: 'function', foreground: '#795e26' },
+    { token: 'variable', foreground: '#001080' },
+    { token: 'parameter', foreground: '#001080' },
+    { token: 'property', foreground: '#001080' }
+  ]
 }

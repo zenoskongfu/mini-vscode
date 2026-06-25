@@ -31,6 +31,13 @@ export interface IEditorService {
   close(path: string): void
   updateContent(path: string, content: string): void
   save(path: string): Promise<void>
+
+  /** 视图请求把光标滚动定位到某行列时触发 */
+  readonly onDidRequestReveal: Event<{ path: string; line: number; column: number }>
+  /** 打开文件并请求定位到指定行列（Problems / 搜索结果跳转用） */
+  revealPosition(path: string, line: number, column: number): Promise<void>
+  /** 视图挂载时取走待处理的定位请求（处理「文件刚打开、视图还没订阅」的时序） */
+  consumeReveal(path: string): { line: number; column: number } | null
 }
 
 export const IEditorService = createDecorator<IEditorService>('editorService')
@@ -51,6 +58,11 @@ export class EditorService implements IEditorService {
 
   private readonly _onDidChangeActiveEditor = new Emitter<string | null>()
   readonly onDidChangeActiveEditor = this._onDidChangeActiveEditor.event
+
+  private readonly _onDidRequestReveal = new Emitter<{ path: string; line: number; column: number }>()
+  readonly onDidRequestReveal = this._onDidRequestReveal.event
+  /** path → 待消费的定位请求（视图挂载晚于请求时兜底） */
+  private readonly _pendingReveals = new Map<string, { line: number; column: number }>()
 
   get tabs(): readonly EditorTab[] {
     return this._tabs
@@ -131,6 +143,19 @@ export class EditorService implements IEditorService {
     tab.savedContent = tab.content
     tab.dirty = false
     this._onDidChangeTabs.fire()
+  }
+
+  async revealPosition(path: string, line: number, column: number): Promise<void> {
+    await this.openEditor(path)
+    // 记下待处理定位：若对应视图此刻还没订阅事件，挂载时会来 consume
+    this._pendingReveals.set(path, { line, column })
+    this._onDidRequestReveal.fire({ path, line, column })
+  }
+
+  consumeReveal(path: string): { line: number; column: number } | null {
+    const r = this._pendingReveals.get(path) ?? null
+    if (r) this._pendingReveals.delete(path)
+    return r
   }
 }
 

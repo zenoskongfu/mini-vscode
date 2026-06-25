@@ -17,6 +17,7 @@ import { extHostPortPromise } from "../../platform/extHostPort";
 import { ICommandService } from "../commands/commandService";
 import { INotificationService, type NotificationSeverity } from "../notification/notificationService";
 import { IStorageService, StorageScope } from "../storage/storageService";
+import { ILanguageFeaturesService } from "../language/languageFeaturesService";
 
 export interface GalleryItem {
 	id: string;
@@ -101,7 +102,8 @@ export class ExtensionService implements IExtensionService {
 	constructor(
 		@ICommandService private readonly commandService: ICommandService,
 		@INotificationService private readonly notificationService: INotificationService,
-		@IStorageService private readonly storageService: IStorageService
+		@IStorageService private readonly storageService: IStorageService,
+		@ILanguageFeaturesService private readonly languageFeatures: ILanguageFeaturesService
 	) {}
 
 	async start(): Promise<void> {
@@ -143,6 +145,8 @@ export class ExtensionService implements IExtensionService {
 				this._fireChange();
 			},
 		});
+		// 接好语言特性桥 + 文档同步（Phase 13.2）
+		this.languageFeatures.attach(rpc);
 
 		// 扩展宿主连接完成后，再加载已安装扩展
 		await this._extHostExtensions.$setDisabledExtensions([...this._disabled]);

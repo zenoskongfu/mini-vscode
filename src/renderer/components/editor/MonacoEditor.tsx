@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react'
+import React, { useRef, useCallback, useEffect } from 'react'
 import Editor, { type OnMount, type OnChange } from '@monaco-editor/react'
 import type { editor } from 'monaco-editor'
 import { getLanguageForPath } from '../../services/monaco-setup'
@@ -6,6 +6,7 @@ import { useService } from '../../platform/ServicesContext'
 import { useEvent } from '../../platform/useEvent'
 import { IConfigurationService } from '../../services/configuration/configurationService'
 import { IThemeService } from '../../services/theme/themeService'
+import { IEditorService } from '../../services/editor/editorService'
 import './MonacoEditor.css'
 
 interface MonacoEditorProps {
@@ -38,6 +39,7 @@ export function MonacoEditor({
   // 编辑器选项与主题来自配置（保存 settings.json 后实时更新）
   const configurationService = useService(IConfigurationService)
   const themeService = useService(IThemeService)
+  const editorService = useService(IEditorService)
   const fontSize = useEvent(
     configurationService.onDidChangeConfiguration,
     () => configurationService.getValue<number>('editor.fontSize', 13)
@@ -46,7 +48,15 @@ export function MonacoEditor({
     configurationService.onDidChangeConfiguration,
     () => configurationService.getValue<boolean>('editor.minimap.enabled', true)
   )
-  const monacoTheme = useEvent(themeService.onDidChangeTheme, () => themeService.getMonacoBase())
+  const monacoTheme = useEvent(themeService.onDidChangeTheme, () => themeService.getMonacoThemeName())
+
+  const reveal = useCallback((line: number, column: number): void => {
+    const ed = editorRef.current
+    if (!ed) return
+    ed.revealLineInCenter(line)
+    ed.setPosition({ lineNumber: line, column })
+    ed.focus()
+  }, [])
 
   const handleMount: OnMount = useCallback((editorInstance, monaco) => {
     editorRef.current = editorInstance
@@ -61,7 +71,21 @@ export function MonacoEditor({
     editorInstance.onDidChangeCursorPosition(e => {
       onCursorChange?.(e.position.lineNumber, e.position.column)
     })
-  }, [onSave, onCursorChange])
+
+    // 兜底：若在本视图挂载之前就有定位请求（如从 Problems 跳转打开新文件）
+    const pending = editorService.consumeReveal(path)
+    if (pending) reveal(pending.line, pending.column)
+  }, [onSave, onCursorChange, editorService, path, reveal])
+
+  // 响应「跳转到行列」请求（文件已打开的情况）
+  useEffect(() => {
+    const d = editorService.onDidRequestReveal(ev => {
+      if (ev.path !== path) return
+      reveal(ev.line, ev.column)
+      editorService.consumeReveal(path)
+    })
+    return () => d.dispose()
+  }, [editorService, path, reveal])
 
   const handleChange: OnChange = useCallback(value => {
     onChange(value ?? '')
@@ -86,6 +110,7 @@ export function MonacoEditor({
           cursorBlinking: 'smooth',
           renderWhitespace: 'selection',
           bracketPairColorization: { enabled: true },
+          'semanticHighlighting.enabled': true,
           automaticLayout: true,
           tabSize: 2,
           lineNumbers: 'on',

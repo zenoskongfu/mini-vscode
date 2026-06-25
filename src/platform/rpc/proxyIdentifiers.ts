@@ -49,6 +49,32 @@ export interface MainThreadExtensionServiceShape {
   $onDidChangeActivation(id: string, state: ActivationState): void
 }
 
+// ── 语言特性相关 DTO（vscode 约定：行列均 0-based）──
+
+export interface UriComponents {
+  scheme: string
+  path: string
+}
+export interface IPosition {
+  line: number
+  character: number
+}
+export interface IRange {
+  start: IPosition
+  end: IPosition
+}
+export interface ILocationDto {
+  uri: UriComponents
+  range: IRange
+}
+
+export interface MainThreadLanguageFeaturesShape {
+  /** 扩展宿主注册了一个 definition provider（handle 寻址，selector 为 languageId 列表） */
+  $registerDefinitionProvider(handle: number, selector: string[]): void
+  /** 注销某 handle 的 provider */
+  $unregisterProvider(handle: number): void
+}
+
 // ── ExtHost 侧（由扩展宿主实现，供 renderer 调用）──
 
 export interface ExtHostExtensionServiceShape {
@@ -69,13 +95,30 @@ export interface ExtHostCommandsShape {
   $executeContributedCommand(id: string, args: unknown[]): Promise<unknown>
 }
 
+export interface ExtHostDocumentsShape {
+  /** 渲染层：某文档打开（含全文 + 语言 id） */
+  $acceptModelOpened(uri: UriComponents, text: string, languageId: string): void
+  /** 渲染层：某文档内容变化（v1 推送全文） */
+  $acceptModelChanged(uri: UriComponents, text: string): void
+  /** 渲染层：某文档关闭/释放 */
+  $acceptModelClosed(uri: UriComponents): void
+}
+
+export interface ExtHostLanguageFeaturesShape {
+  /** 运行某 handle 的 definition provider，返回归一后的 Location 列表 */
+  $provideDefinition(handle: number, resource: UriComponents, position: IPosition): Promise<ILocationDto[]>
+}
+
 export const MainContext = {
   MainThreadCommands: 'MainThreadCommands',
   MainThreadMessageService: 'MainThreadMessageService',
-  MainThreadExtensionService: 'MainThreadExtensionService'
+  MainThreadExtensionService: 'MainThreadExtensionService',
+  MainThreadLanguageFeatures: 'MainThreadLanguageFeatures'
 } as const
 
 export const ExtHostContext = {
   ExtHostExtensionService: 'ExtHostExtensionService',
-  ExtHostCommands: 'ExtHostCommands'
+  ExtHostCommands: 'ExtHostCommands',
+  ExtHostDocuments: 'ExtHostDocuments',
+  ExtHostLanguageFeatures: 'ExtHostLanguageFeatures'
 } as const

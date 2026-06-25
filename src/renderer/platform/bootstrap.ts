@@ -15,7 +15,9 @@ import '../services/terminal/terminalService'
 import '../services/configuration/configurationService'
 import '../services/theme/themeService'
 import '../services/notification/notificationService'
+import '../services/language/languageFeaturesService'
 import '../services/extensions/extensionService'
+import '../services/diagnostics/diagnosticsService'
 
 /**
  * 从所有已注册单例构建根 InstantiationService。

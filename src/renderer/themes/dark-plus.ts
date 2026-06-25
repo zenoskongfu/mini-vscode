@@ -61,5 +61,23 @@ export const darkPlus: ThemeDefinition = {
 
     '--color-scrollbar-thumb': '#424242',
     '--color-scrollbar-thumb-hover': '#686868'
-  }
+  },
+  // 近似 VSCode Dark+ 的语法/语义着色
+  tokenRules: [
+    { token: 'comment', foreground: '#6A9955', fontStyle: 'italic' },
+    { token: 'string', foreground: '#ce9178' },
+    { token: 'keyword', foreground: '#569cd6' },
+    { token: 'number', foreground: '#b5cea8' },
+    { token: 'regexp', foreground: '#d16969' },
+    { token: 'operator', foreground: '#d4d4d4' },
+    { token: 'type', foreground: '#4ec9b0' },
+    { token: 'class', foreground: '#4ec9b0' },
+    { token: 'interface', foreground: '#4ec9b0' },
+    { token: 'enum', foreground: '#4ec9b0' },
+    { token: 'namespace', foreground: '#4ec9b0' },
+    { token: 'function', foreground: '#dcdcaa' },
+    { token: 'variable', foreground: '#9cdcfe' },
+    { token: 'parameter', foreground: '#9cdcfe' },
+    { token: 'property', foreground: '#9cdcfe' }
+  ]
 }

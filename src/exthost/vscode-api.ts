@@ -5,9 +5,29 @@ import {
   type MainThreadMessageShape
 } from '../platform/rpc/proxyIdentifiers'
 import { ExtHostCommands } from './extHostCommands'
+import { ExtHostUri } from './extHostDocuments'
+import {
+  ExtHostLanguageFeatures,
+  Position,
+  Range,
+  Location,
+  type DefinitionProvider
+} from './extHostLanguageFeatures'
 
 interface Disposable {
   dispose(): void
+}
+
+/** 语言选择器归一为 languageId 字符串数组 */
+type LanguageSelector =
+  | string
+  | { language?: string }
+  | Array<string | { language?: string }>
+function normalizeSelector(selector: LanguageSelector): string[] {
+  const one = (s: string | { language?: string }): string | undefined =>
+    typeof s === 'string' ? s : s.language
+  const list = Array.isArray(selector) ? selector : [selector]
+  return list.map(one).filter((x): x is string => !!x)
 }
 
 /**
@@ -18,6 +38,7 @@ interface Disposable {
 export function createVSCodeApi(
   rpc: RPCProtocol,
   extHostCommands: ExtHostCommands,
+  extHostLanguageFeatures: ExtHostLanguageFeatures,
   extensionId: string
 ): Record<string, unknown> {
   const mainCommands = rpc.getProxy<MainThreadCommandsShape>(MainContext.MainThreadCommands)
@@ -49,9 +70,23 @@ export function createVSCodeApi(
       showErrorMessage: (message: string): Promise<void> =>
         mainMessage.$showMessage('error', message)
     },
+    languages: {
+      registerDefinitionProvider(selector: LanguageSelector, provider: DefinitionProvider): Disposable {
+        return extHostLanguageFeatures.registerDefinitionProvider(
+          extensionId,
+          normalizeSelector(selector),
+          provider
+        )
+      }
+    },
     workspace: {
       // 最小占位命名空间；后续 MainThread* 处理器增加时再扩展
       getConfiguration: () => ({ get: () => undefined })
-    }
+    },
+    // 扩展构造返回值用的值类型
+    Uri: ExtHostUri,
+    Position,
+    Range,
+    Location
   }
 }

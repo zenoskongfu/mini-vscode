@@ -5,6 +5,7 @@ import { IConfigurationService } from '../configuration/configurationService'
 import type { ThemeDefinition } from '../../themes/theme-types'
 import { darkPlus } from '../../themes/dark-plus'
 import { lightPlus } from '../../themes/light-plus'
+import { monaco, monacoThemeName } from '../monaco-setup'
 
 const THEME_SETTING = 'workbench.colorTheme'
 
@@ -19,6 +20,8 @@ export interface IThemeService {
   /** 从配置加载主题并订阅配置变化；启动时调用一次 */
   initialize(): void
   getMonacoBase(): 'vs-dark' | 'vs'
+  /** 当前主题对应的 Monaco 自定义主题名（供 <Editor theme=…> 用） */
+  getMonacoThemeName(): string
 }
 
 export const IThemeService = createDecorator<IThemeService>('themeService')
@@ -51,6 +54,10 @@ export class ThemeService implements IThemeService {
     return this._current.monacoBase
   }
 
+  getMonacoThemeName(): string {
+    return monacoThemeName(this._current.id)
+  }
+
   initialize(): void {
     this.applyFromConfig()
     if (this._initialized) return
@@ -77,11 +84,9 @@ export class ThemeService implements IThemeService {
     root.style.colorScheme = theme.type
     root.setAttribute('data-theme', theme.type)
 
-    // 2. Monaco 编辑器主题（尽力而为；全局实例由 setupMonaco 设置）
-    const monaco = (globalThis as Record<string, unknown>).__monaco as
-      | { editor: { setTheme: (t: string) => void } }
-      | undefined
-    monaco?.editor.setTheme(theme.monacoBase)
+    // 2. Monaco 编辑器主题：切到该主题的自定义 Monaco 主题（含语法/语义着色）。
+    //    主题已在 setupMonaco() 启动时 defineTheme 过，这里只需 setTheme。
+    monaco.editor.setTheme(monacoThemeName(theme.id))
 
     this._onDidChangeTheme.fire(theme)
   }
