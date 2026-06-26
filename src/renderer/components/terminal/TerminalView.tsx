@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { useService } from '../../platform/ServicesContext'
 import { ITerminalService } from '../../services/terminal/terminalService'
+import { IThemeService } from '../../services/theme/themeService'
 import './TerminalView.css'
 
 interface TerminalViewProps {
@@ -22,6 +23,7 @@ interface TerminalViewProps {
  */
 export function TerminalView({ id }: TerminalViewProps): React.JSX.Element {
   const terminalService = useService(ITerminalService)
+  const themeService = useService(IThemeService)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -33,12 +35,12 @@ export function TerminalView({ id }: TerminalViewProps): React.JSX.Element {
       fontSize: 13,
       cursorBlink: true,
       // 将 xterm 主题映射到 workbench 调色板
-      theme: {
-        background: getCssVar('--color-bg-panel', '#1e1e1e'),
-        foreground: getCssVar('--color-fg-default', '#cccccc'),
-        cursor: getCssVar('--color-editor-cursor', '#aeafad'),
-        selectionBackground: getCssVar('--color-editor-selection', '#264f78')
-      }
+      theme: buildXtermTheme()
+    })
+
+    // 跟随主题切换更新 xterm 配色（修复：首个终端在主题应用前创建会停留在深色）
+    const themeSub = themeService.onDidChangeTheme(() => {
+      term.options.theme = buildXtermTheme()
     })
 
     const fitAddon = new FitAddon()
@@ -72,11 +74,22 @@ export function TerminalView({ id }: TerminalViewProps): React.JSX.Element {
       resizeObserver.disconnect()
       unsubData()
       inputSub.dispose()
+      themeSub.dispose()
       term.dispose()
     }
-  }, [id, terminalService])
+  }, [id, terminalService, themeService])
 
   return <div className="terminal-view" ref={containerRef} />
+}
+
+/** 从当前 :root CSS 调色板构造 xterm 主题（主题切换后变量已更新） */
+function buildXtermTheme(): { background: string; foreground: string; cursor: string; selectionBackground: string } {
+  return {
+    background: getCssVar('--color-bg-panel', '#1e1e1e'),
+    foreground: getCssVar('--color-fg-default', '#cccccc'),
+    cursor: getCssVar('--color-editor-cursor', '#aeafad'),
+    selectionBackground: getCssVar('--color-editor-selection', '#264f78')
+  }
 }
 
 function getCssVar(name: string, fallback: string): string {

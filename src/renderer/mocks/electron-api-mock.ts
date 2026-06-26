@@ -133,6 +133,14 @@ export function injectElectronAPIMock(): void {
       cancel: noop
     },
     config: createConfigMock(),
+    state: {
+      get: () => Promise.resolve(JSON.parse(localStorage.getItem('mini-vscode:state') ?? '{}')),
+      set: (partial: Record<string, unknown>) => {
+        const s = JSON.parse(localStorage.getItem('mini-vscode:state') ?? '{}')
+        localStorage.setItem('mini-vscode:state', JSON.stringify({ ...s, ...partial }))
+        return Promise.resolve()
+      }
+    },
     dialog: {
       openFolder: () => Promise.resolve(FAKE_ROOT),
       openFile: () => Promise.resolve(null),

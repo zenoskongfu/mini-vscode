@@ -91,6 +91,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
 
+  // 应用状态（主进程 state.json，抗强杀持久化）
+  state: {
+    get: () => ipcRenderer.invoke('state:get'),
+    set: (partial: unknown) => ipcRenderer.invoke('state:set', partial)
+  },
+
   // 对话框
   dialog: {
     openFolder: () => ipcRenderer.invoke('dialog:openFolder'),

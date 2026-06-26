@@ -1,0 +1,14 @@
+{
+  "name": "insert-date",
+  "displayName": "Insert Date",
+  "description": "Adds a command that reports the current date/time.",
+  "publisher": "mini-vscode",
+  "version": "1.2.0",
+  "main": "./extension.js",
+  "activationEvents": ["onCommand:insert-date.now"],
+  "contributes": {
+    "commands": [
+      { "command": "insert-date.now", "title": "Insert Current Date", "category": "Insert Date" }
+    ]
+  }
+}

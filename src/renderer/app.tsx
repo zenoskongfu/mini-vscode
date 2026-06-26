@@ -19,9 +19,8 @@ import { registerWorkbenchContributions } from './workbench/contrib/registerCont
 export default function App(): React.JSX.Element {
   const [instantiationService] = useState(() => {
     const insta = createInstantiationService()
-    // 恢复持久化布局与上次打开的文件夹
+    // 恢复持久化布局（同步，来自 localStorage）
     insta.get(ILayoutService).restore()
-    insta.get(IWorkspaceService).restore()
     // 注册命令和默认快捷键，并激活 keydown 监听器
     registerWorkbenchContributions(insta)
     insta.get(IKeybindingService)
@@ -36,6 +35,8 @@ export default function App(): React.JSX.Element {
     config.initialize().then(() => {
       instantiationService.get(IThemeService).initialize()
     })
+    // 异步恢复上次打开的文件夹（来自主进程 state.json）
+    instantiationService.get(IWorkspaceService).restore()
     // 连接扩展宿主（浏览器预览中不会收到端口，因此是 no-op）
     instantiationService.get(IExtensionService).start()
   }, [instantiationService])

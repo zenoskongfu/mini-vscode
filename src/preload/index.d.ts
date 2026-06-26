@@ -47,6 +47,10 @@ export interface ElectronAPI {
     getPath: () => Promise<string>
     onChange: (cb: (settings: Record<string, unknown>) => void) => () => void
   }
+  state: {
+    get: () => Promise<Record<string, unknown>>
+    set: (partial: Record<string, unknown>) => Promise<void>
+  }
   dialog: {
     openFolder: () => Promise<string | null>
     openFile: () => Promise<string | null>

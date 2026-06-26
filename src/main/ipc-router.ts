@@ -3,6 +3,7 @@ import { WindowManager } from './window-manager'
 import { FileSystemService } from './services/file-system-service'
 import { TerminalService } from './services/terminal-service'
 import { ConfigService } from './services/config-service'
+import { StateService } from './services/state-service'
 import { ExtensionManagementService } from './extensions/extensionManagementService'
 
 export const IPC_CHANNELS = {
@@ -30,6 +31,8 @@ export const IPC_CHANNELS = {
   CONFIG_GET: 'config:get',
   CONFIG_SET: 'config:set',
   CONFIG_GET_PATH: 'config:getPath',
+  STATE_GET: 'state:get',
+  STATE_SET: 'state:set',
   EXT_LIST_GALLERY: 'ext:listGallery',
   EXT_INSTALL: 'ext:install',
   EXT_UNINSTALL: 'ext:uninstall',
@@ -46,6 +49,7 @@ export class IPCRouter {
   private fsService = new FileSystemService()
   private terminalService = new TerminalService()
   private configService = new ConfigService()
+  private stateService = new StateService()
   private extManagementService = new ExtensionManagementService()
 
   constructor(private windowManager: WindowManager) {}
@@ -56,7 +60,16 @@ export class IPCRouter {
     this.registerDialogHandlers()
     this.registerTerminalHandlers()
     this.registerConfigHandlers()
+    this.registerStateHandlers()
     this.registerExtensionHandlers()
+  }
+
+  private registerStateHandlers(): void {
+    this.stateService.init()
+    ipcMain.handle(IPC_CHANNELS.STATE_GET, () => this.stateService.get())
+    ipcMain.handle(IPC_CHANNELS.STATE_SET, (_e, partial: Record<string, unknown>) =>
+      this.stateService.set(partial)
+    )
   }
 
   private registerExtensionHandlers(): void {

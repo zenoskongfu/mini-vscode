@@ -1,7 +1,6 @@
 import { createDecorator } from '../../instantiation/instantiation'
 import { registerSingleton } from '../../instantiation/extensions'
 import { Emitter, Event } from '../../base/event'
-import { IStorageService, StorageScope } from '../storage/storageService'
 import type { FileNode } from '../../types/file-tree'
 
 export interface IWorkspaceService {
@@ -16,12 +15,13 @@ export interface IWorkspaceService {
   setRoot(path: string | null): Promise<void>
   closeFolder(): Promise<void>
   readDir(path: string): Promise<FileNode[]>
-  restore(): void
+  restore(): Promise<void>
 }
 
 export const IWorkspaceService = createDecorator<IWorkspaceService>('workspaceService')
 
-const STORAGE_KEY_ROOT = 'workspace.root'
+/** state.json 里记「上次打开的文件夹」的键 */
+const STATE_KEY_ROOT = 'workspace.lastFolder'
 
 /**
  * WorkspaceService 持有当前活动文件夹根路径。
@@ -36,17 +36,19 @@ export class WorkspaceService implements IWorkspaceService {
   private readonly _onDidChangeRoot = new Emitter<string | null>()
   readonly onDidChangeRoot = this._onDidChangeRoot.event
 
-  constructor(@IStorageService private readonly storageService: IStorageService) {}
-
   get root(): string | null {
     return this._root
   }
 
-  /** 恢复上次打开的文件夹（启动时调用一次） */
-  restore(): void {
-    const saved = this.storageService.get(STORAGE_KEY_ROOT, StorageScope.GLOBAL)
-    if (saved) {
-      this.setRoot(saved)
+  /**
+   * 恢复上次打开的文件夹（启动时调用一次）。
+   * 从主进程 state.json 异步读取（抗强杀），读到后 setRoot 会 fire
+   * onDidChangeRoot，订阅式的 Explorer 自动刷新。
+   */
+  async restore(): Promise<void> {
+    const saved = (await window.electronAPI.state.get())[STATE_KEY_ROOT]
+    if (typeof saved === 'string' && saved) {
+      await this.setRoot(saved)
     }
   }
 
@@ -67,10 +69,10 @@ export class WorkspaceService implements IWorkspaceService {
     this._root = path
 
     if (path) {
-      this.storageService.store(STORAGE_KEY_ROOT, path, StorageScope.GLOBAL)
+      void window.electronAPI.state.set({ [STATE_KEY_ROOT]: path })
       await window.electronAPI.fs.watchStart(path)
     } else {
-      this.storageService.remove(STORAGE_KEY_ROOT, StorageScope.GLOBAL)
+      void window.electronAPI.state.set({ [STATE_KEY_ROOT]: null })
     }
 
     this._onDidChangeRoot.fire(path)
