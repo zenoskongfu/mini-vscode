@@ -82,8 +82,30 @@ function configureTypeScript(): void {
   }
   ts.typescriptDefaults.setCompilerOptions(compilerOptions)
   ts.javascriptDefaults.setCompilerOptions(compilerOptions)
-  ts.typescriptDefaults.setDiagnosticsOptions({ noSemanticValidation: false, noSyntaxValidation: false })
-  ts.javascriptDefaults.setDiagnosticsOptions({ noSemanticValidation: true, noSyntaxValidation: false })
+
+  // 保真路线（Phase 13.2+）：关掉内置 TS/JS worker 的全部语言特性，
+  // 让扩展（gallery/ts-definition）独占定义；诊断一并关掉以消除 import 红线。
+  // 注意：语法/语义着色来自 Monarch + 主题 tokenRules，与 worker 无关，故不受影响。
+  const allOff: monaco.languages.typescript.ModeConfiguration = {
+    completionItems: false,
+    hovers: false,
+    documentSymbols: false,
+    definitions: false,
+    references: false,
+    documentHighlights: false,
+    rename: false,
+    diagnostics: false,
+    documentRangeFormattingEdits: false,
+    signatureHelp: false,
+    onTypeFormattingEdits: false,
+    codeActions: false,
+    inlayHints: false
+  }
+  const diagOff = { noSemanticValidation: true, noSyntaxValidation: true, noSuggestionDiagnostics: true }
+  ts.typescriptDefaults.setModeConfiguration(allOff)
+  ts.javascriptDefaults.setModeConfiguration(allOff)
+  ts.typescriptDefaults.setDiagnosticsOptions(diagOff)
+  ts.javascriptDefaults.setDiagnosticsOptions(diagOff)
 }
 
 /**

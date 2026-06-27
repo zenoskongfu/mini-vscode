@@ -72,7 +72,8 @@ class ExtHostExtensionService implements ExtHostExtensionServiceShape {
 		private readonly extensionsDir: string,
 		private readonly rpc: RPCProtocol,
 		private readonly extHostCommands: ExtHostCommands,
-		private readonly extHostLanguageFeatures: ExtHostLanguageFeatures
+		private readonly extHostLanguageFeatures: ExtHostLanguageFeatures,
+		private readonly extHostDocuments: ExtHostDocuments
 	) {
 		this._mainCommands = rpc.getProxy<MainThreadCommandsShape>(MainContext.MainThreadCommands);
 		this._mainExtensions = rpc.getProxy<MainThreadExtensionServiceShape>(
@@ -158,7 +159,13 @@ class ExtHostExtensionService implements ExtHostExtensionServiceShape {
 				// 顶层 require('vscode') 会解析到这个扩展自己的 API。
 				extensionApis.set(
 					ext.id,
-					createVSCodeApi(this.rpc, this.extHostCommands, this.extHostLanguageFeatures, ext.id)
+					createVSCodeApi(
+						this.rpc,
+						this.extHostCommands,
+						this.extHostLanguageFeatures,
+						this.extHostDocuments,
+						ext.id
+					)
 				);
 				currentExtensionId = ext.id;
 				const req = createRequire(path.join(ext.extensionPath, "package.json"));
@@ -267,7 +274,8 @@ parentPort.once("message", (e) => {
 		init.extensionsDir,
 		rpc,
 		extHostCommands,
-		extHostLanguageFeatures
+		extHostLanguageFeatures,
+		extHostDocuments
 	);
 	rpc.set(ExtHostContext.ExtHostExtensionService, extService);
 	extService.scan();

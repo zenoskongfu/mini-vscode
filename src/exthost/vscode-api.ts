@@ -5,7 +5,7 @@ import {
   type MainThreadMessageShape
 } from '../platform/rpc/proxyIdentifiers'
 import { ExtHostCommands } from './extHostCommands'
-import { ExtHostUri } from './extHostDocuments'
+import { ExtHostUri, ExtHostDocuments } from './extHostDocuments'
 import {
   ExtHostLanguageFeatures,
   Position,
@@ -39,6 +39,7 @@ export function createVSCodeApi(
   rpc: RPCProtocol,
   extHostCommands: ExtHostCommands,
   extHostLanguageFeatures: ExtHostLanguageFeatures,
+  extHostDocuments: ExtHostDocuments,
   extensionId: string
 ): Record<string, unknown> {
   const mainCommands = rpc.getProxy<MainThreadCommandsShape>(MainContext.MainThreadCommands)
@@ -80,8 +81,14 @@ export function createVSCodeApi(
       }
     },
     workspace: {
-      // 最小占位命名空间；后续 MainThread* 处理器增加时再扩展
-      getConfiguration: () => ({ get: () => undefined })
+      getConfiguration: () => ({ get: () => undefined }),
+      // 打开的文档（含未保存文本），供语言服务读取实时内容
+      get textDocuments() {
+        return extHostDocuments.all()
+      },
+      onDidChangeTextDocument(cb: (e: { document: unknown }) => void) {
+        return extHostDocuments.onDidChangeDocument(doc => cb({ document: doc }))
+      }
     },
     // 扩展构造返回值用的值类型
     Uri: ExtHostUri,
