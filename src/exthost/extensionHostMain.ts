@@ -14,6 +14,7 @@ import {
 import { ExtHostCommands } from "./extHostCommands";
 import { ExtHostDocuments } from "./extHostDocuments";
 import { ExtHostLanguageFeatures } from "./extHostLanguageFeatures";
+import { ExtHostDiagnostics } from "./extHostDiagnostics";
 import { createVSCodeApi } from "./vscode-api";
 
 /**
@@ -73,7 +74,8 @@ class ExtHostExtensionService implements ExtHostExtensionServiceShape {
 		private readonly rpc: RPCProtocol,
 		private readonly extHostCommands: ExtHostCommands,
 		private readonly extHostLanguageFeatures: ExtHostLanguageFeatures,
-		private readonly extHostDocuments: ExtHostDocuments
+		private readonly extHostDocuments: ExtHostDocuments,
+		private readonly extHostDiagnostics: ExtHostDiagnostics
 	) {
 		this._mainCommands = rpc.getProxy<MainThreadCommandsShape>(MainContext.MainThreadCommands);
 		this._mainExtensions = rpc.getProxy<MainThreadExtensionServiceShape>(
@@ -164,6 +166,7 @@ class ExtHostExtensionService implements ExtHostExtensionServiceShape {
 						this.extHostCommands,
 						this.extHostLanguageFeatures,
 						this.extHostDocuments,
+						this.extHostDiagnostics,
 						ext.id
 					)
 				);
@@ -222,6 +225,8 @@ class ExtHostExtensionService implements ExtHostExtensionServiceShape {
 		}
 		// 3b. 反注册该扩展注册的所有语言特性 provider
 		this.extHostLanguageFeatures.unregisterByExtension(id);
+		// 3c. 清空该扩展的所有诊断
+		this.extHostDiagnostics.unregisterByExtension(id);
 
 		// 4. 清模块缓存（仅该扩展自身路径下的文件，不动外部依赖）
 		const prefix = record?.context.extensionPath ?? this._extensions.find((e) => e.id === id)?.extensionPath;
@@ -269,13 +274,15 @@ parentPort.once("message", (e) => {
 		ExtHostContext.ExtHostLanguageFeatures,
 		new ExtHostLanguageFeatures(rpc, extHostDocuments)
 	);
+	const extHostDiagnostics = new ExtHostDiagnostics(rpc);
 
 	const extService = new ExtHostExtensionService(
 		init.extensionsDir,
 		rpc,
 		extHostCommands,
 		extHostLanguageFeatures,
-		extHostDocuments
+		extHostDocuments,
+		extHostDiagnostics
 	);
 	rpc.set(ExtHostContext.ExtHostExtensionService, extService);
 	extService.scan();

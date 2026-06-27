@@ -75,6 +75,20 @@ export interface MainThreadLanguageFeaturesShape {
   $unregisterProvider(handle: number): void
 }
 
+/** 一条诊断的跨 RPC 表示（range 为 vscode 0-based；severity 为 vscode 0..3） */
+export interface IMarkerDto {
+  range: IRange
+  message: string
+  severity: number
+  source?: string
+  code?: string
+}
+
+export interface MainThreadDiagnosticsShape {
+  /** 按 owner 批量替换若干文件的诊断（名称照搬 VSCode MainThreadDiagnostics） */
+  $changeMany(owner: string, entries: [UriComponents, IMarkerDto[]][]): void
+}
+
 // ── ExtHost 侧（由扩展宿主实现，供 renderer 调用）──
 
 export interface ExtHostExtensionServiceShape {
@@ -113,7 +127,8 @@ export const MainContext = {
   MainThreadCommands: 'MainThreadCommands',
   MainThreadMessageService: 'MainThreadMessageService',
   MainThreadExtensionService: 'MainThreadExtensionService',
-  MainThreadLanguageFeatures: 'MainThreadLanguageFeatures'
+  MainThreadLanguageFeatures: 'MainThreadLanguageFeatures',
+  MainThreadDiagnostics: 'MainThreadDiagnostics'
 } as const
 
 export const ExtHostContext = {

@@ -1,0 +1,10 @@
+{
+  "name": "ts-language-features",
+  "displayName": "TypeScript Language Features",
+  "description": "Cross-file go-to-definition and real diagnostics for TypeScript, powered by the TypeScript language service.",
+  "publisher": "mini-vscode",
+  "version": "1.0.0",
+  "main": "./extension.js",
+  "activationEvents": ["onLanguage:typescript", "onLanguage:typescriptreact", "*"],
+  "contributes": {}
+}

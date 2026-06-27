@@ -78,9 +78,13 @@ export class ExtHostTextDocument {
 export class ExtHostDocuments implements ExtHostDocumentsShape {
   private readonly _docs = new Map<string, ExtHostTextDocument>()
   private readonly _changeListeners = new Set<(doc: ExtHostTextDocument) => void>()
+  private readonly _openListeners = new Set<(doc: ExtHostTextDocument) => void>()
+  private readonly _closeListeners = new Set<(doc: ExtHostTextDocument) => void>()
 
   $acceptModelOpened(uri: UriComponents, text: string, languageId: string): void {
-    this._docs.set(key(uri), new ExtHostTextDocument(ExtHostUri.from(uri), text, languageId))
+    const doc = new ExtHostTextDocument(ExtHostUri.from(uri), text, languageId)
+    this._docs.set(key(uri), doc)
+    for (const cb of this._openListeners) cb(doc)
   }
 
   $acceptModelChanged(uri: UriComponents, text: string): void {
@@ -94,7 +98,9 @@ export class ExtHostDocuments implements ExtHostDocumentsShape {
   }
 
   $acceptModelClosed(uri: UriComponents): void {
+    const doc = this._docs.get(key(uri))
     this._docs.delete(key(uri))
+    if (doc) for (const cb of this._closeListeners) cb(doc)
   }
 
   /** 供 provider 查询文档；不存在时返回一个空文档兜底 */
@@ -111,5 +117,17 @@ export class ExtHostDocuments implements ExtHostDocumentsShape {
   onDidChangeDocument(cb: (doc: ExtHostTextDocument) => void): { dispose(): void } {
     this._changeListeners.add(cb)
     return { dispose: () => this._changeListeners.delete(cb) }
+  }
+
+  /** 文档打开订阅（供 vscode.workspace.onDidOpenTextDocument） */
+  onDidOpenDocument(cb: (doc: ExtHostTextDocument) => void): { dispose(): void } {
+    this._openListeners.add(cb)
+    return { dispose: () => this._openListeners.delete(cb) }
+  }
+
+  /** 文档关闭订阅（供 vscode.workspace.onDidCloseTextDocument） */
+  onDidCloseDocument(cb: (doc: ExtHostTextDocument) => void): { dispose(): void } {
+    this._closeListeners.add(cb)
+    return { dispose: () => this._closeListeners.delete(cb) }
   }
 }

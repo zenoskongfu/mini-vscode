@@ -13,6 +13,7 @@ import {
   Location,
   type DefinitionProvider
 } from './extHostLanguageFeatures'
+import { ExtHostDiagnostics, Diagnostic, DiagnosticSeverity } from './extHostDiagnostics'
 
 interface Disposable {
   dispose(): void
@@ -40,6 +41,7 @@ export function createVSCodeApi(
   extHostCommands: ExtHostCommands,
   extHostLanguageFeatures: ExtHostLanguageFeatures,
   extHostDocuments: ExtHostDocuments,
+  extHostDiagnostics: ExtHostDiagnostics,
   extensionId: string
 ): Record<string, unknown> {
   const mainCommands = rpc.getProxy<MainThreadCommandsShape>(MainContext.MainThreadCommands)
@@ -78,6 +80,9 @@ export function createVSCodeApi(
           normalizeSelector(selector),
           provider
         )
+      },
+      createDiagnosticCollection(name?: string) {
+        return extHostDiagnostics.createCollection(extensionId, name)
       }
     },
     workspace: {
@@ -88,12 +93,20 @@ export function createVSCodeApi(
       },
       onDidChangeTextDocument(cb: (e: { document: unknown }) => void) {
         return extHostDocuments.onDidChangeDocument(doc => cb({ document: doc }))
+      },
+      onDidOpenTextDocument(cb: (doc: unknown) => void) {
+        return extHostDocuments.onDidOpenDocument(doc => cb(doc))
+      },
+      onDidCloseTextDocument(cb: (doc: unknown) => void) {
+        return extHostDocuments.onDidCloseDocument(doc => cb(doc))
       }
     },
     // 扩展构造返回值用的值类型
     Uri: ExtHostUri,
     Position,
     Range,
-    Location
+    Location,
+    Diagnostic,
+    DiagnosticSeverity
   }
 }

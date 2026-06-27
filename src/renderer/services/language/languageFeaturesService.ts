@@ -8,9 +8,11 @@ import {
 	MainContext,
 	ExtHostContext,
 	type MainThreadLanguageFeaturesShape,
+	type MainThreadDiagnosticsShape,
 	type ExtHostLanguageFeaturesShape,
 	type ExtHostDocumentsShape,
 	type UriComponents,
+	type IMarkerDto,
 } from "../../../platform/rpc/proxyIdentifiers";
 
 export interface ILanguageFeaturesService {
@@ -33,6 +35,8 @@ export class LanguageFeaturesService implements ILanguageFeaturesService {
 	private _extHostLang!: ExtHostLanguageFeaturesShape;
 	private _extHostDocs!: ExtHostDocumentsShape;
 	private readonly _providers = new Map<number, IDisposable>();
+	/** 简化版 marker 存储：owner → (文件 path → 诊断)。用于「文件后打开时补设波浪线」（坑 #2） */
+	private readonly _markers = new Map<string, Map<string, IMarkerDto[]>>();
 	private _docsWired = false;
 	private _openerWired = false;
 
@@ -53,6 +57,10 @@ export class LanguageFeaturesService implements ILanguageFeaturesService {
 				this._providers.get(handle)?.dispose();
 				this._providers.delete(handle);
 			},
+		});
+
+		rpc.set<MainThreadDiagnosticsShape>(MainContext.MainThreadDiagnostics, {
+			$changeMany: (owner, entries) => this._changeMany(owner, entries),
 		});
 
 		// monaco 文档监听是全局的，只接一次；回调里用 this._extHostDocs（已指向最新 rpc）。
@@ -96,6 +104,8 @@ export class LanguageFeaturesService implements ILanguageFeaturesService {
 			this._extHostDocs.$acceptModelOpened(this._uri(model), model.getValue(), model.getLanguageId());
 			// 绑定monaco editor的变化，任何代码的编辑，都会实时同步到插件的textDocument
 			model.onDidChangeContent(() => this._extHostDocs.$acceptModelChanged(this._uri(model), model.getValue()));
+			// 坑 #2：文件此刻才打开，把之前缓存的诊断补设为波浪线
+			this._applyCachedMarkers(model);
 		};
 		monaco.editor.getModels().forEach(track);
 		monaco.editor.onDidCreateModel(track);
@@ -122,6 +132,48 @@ export class LanguageFeaturesService implements ILanguageFeaturesService {
 		});
 		this._providers.set(handle, disposable);
 	}
+
+	// ── 诊断（Phase 13.3）──────────────────────────────────────
+
+	/** 扩展宿主按 owner 批量更新诊断 → 缓存 + 设到对应 model 的 marker */
+	private _changeMany(owner: string, entries: [UriComponents, IMarkerDto[]][]): void {
+		let perOwner = this._markers.get(owner);
+		if (!perOwner) {
+			perOwner = new Map<string, IMarkerDto[]>();
+			this._markers.set(owner, perOwner);
+		}
+		for (const [uri, dtos] of entries) {
+			if (dtos.length === 0) perOwner.delete(uri.path);
+			else perOwner.set(uri.path, dtos);
+			// 坑 #1：按 path 找 model（model 的 uri.scheme 可能是空串，不能重建 uri 去匹配）
+			const model = monaco.editor.getModels().find((m) => m.uri.path === uri.path);
+			if (model) monaco.editor.setModelMarkers(model, owner, dtos.map(toMonacoMarker));
+		}
+	}
+
+	/** 某 model 刚创建时，把缓存里属于它的各 owner 诊断补设为 marker */
+	private _applyCachedMarkers(model: monaco.editor.ITextModel): void {
+		for (const [owner, perOwner] of this._markers) {
+			const dtos = perOwner.get(model.uri.path);
+			if (dtos && dtos.length) monaco.editor.setModelMarkers(model, owner, dtos.map(toMonacoMarker));
+		}
+	}
+}
+
+/** vscode severity(0..3) → monaco MarkerSeverity（Error=8/Warning=4/Info=2/Hint=1，坑 #3） */
+const MONACO_SEVERITY = [8, 4, 2, 1];
+
+function toMonacoMarker(dto: IMarkerDto): monaco.editor.IMarkerData {
+	return {
+		severity: MONACO_SEVERITY[dto.severity] ?? 8,
+		message: dto.message,
+		startLineNumber: dto.range.start.line + 1, // vscode 0-based → monaco 1-based
+		startColumn: dto.range.start.character + 1,
+		endLineNumber: dto.range.end.line + 1,
+		endColumn: dto.range.end.character + 1,
+		source: dto.source,
+		code: dto.code,
+	};
 }
 
 registerSingleton(ILanguageFeaturesService, LanguageFeaturesService);
