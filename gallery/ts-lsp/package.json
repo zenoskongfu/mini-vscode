@@ -1,0 +1,10 @@
+{
+  "name": "ts-lsp",
+  "displayName": "TypeScript LSP",
+  "description": "TypeScript diagnostics + go-to-definition via typescript-language-server (LSP over stdio). The faithful 'extension = thin LSP client' route.",
+  "publisher": "mini-vscode",
+  "version": "1.0.0",
+  "main": "./extension.js",
+  "activationEvents": ["onLanguage:typescript", "onLanguage:typescriptreact"],
+  "contributes": {}
+}

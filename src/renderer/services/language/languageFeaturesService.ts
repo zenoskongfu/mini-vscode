@@ -11,6 +11,7 @@ import {
 	type MainThreadDiagnosticsShape,
 	type ExtHostLanguageFeaturesShape,
 	type ExtHostDocumentsShape,
+	type ExtHostExtensionServiceShape,
 	type UriComponents,
 	type IMarkerDto,
 } from "../../../platform/rpc/proxyIdentifiers";
@@ -34,6 +35,7 @@ export class LanguageFeaturesService implements ILanguageFeaturesService {
 
 	private _extHostLang!: ExtHostLanguageFeaturesShape;
 	private _extHostDocs!: ExtHostDocumentsShape;
+	private _extHostExtensions!: ExtHostExtensionServiceShape;
 	private readonly _providers = new Map<number, IDisposable>();
 	/** 简化版 marker 存储：owner → (文件 path → 诊断)。用于「文件后打开时补设波浪线」（坑 #2） */
 	private readonly _markers = new Map<string, Map<string, IMarkerDto[]>>();
@@ -50,6 +52,7 @@ export class LanguageFeaturesService implements ILanguageFeaturesService {
 	attach(rpc: RPCProtocol): void {
 		this._extHostLang = rpc.getProxy<ExtHostLanguageFeaturesShape>(ExtHostContext.ExtHostLanguageFeatures);
 		this._extHostDocs = rpc.getProxy<ExtHostDocumentsShape>(ExtHostContext.ExtHostDocuments);
+		this._extHostExtensions = rpc.getProxy<ExtHostExtensionServiceShape>(ExtHostContext.ExtHostExtensionService);
 
 		rpc.set<MainThreadLanguageFeaturesShape>(MainContext.MainThreadLanguageFeatures, {
 			$registerDefinitionProvider: (handle, selector) => this._registerDefinition(handle, selector),
@@ -104,6 +107,8 @@ export class LanguageFeaturesService implements ILanguageFeaturesService {
 			this._extHostDocs.$acceptModelOpened(this._uri(model), model.getValue(), model.getLanguageId());
 			// 绑定monaco editor的变化，任何代码的编辑，都会实时同步到插件的textDocument
 			model.onDidChangeContent(() => this._extHostDocs.$acceptModelChanged(this._uri(model), model.getValue()));
+			// 触发 onLanguage: 激活事件（让按语言激活的扩展——如 LSP 客户端——在打开对应文件时启动）
+			this._extHostExtensions.$activateByEvent(`onLanguage:${model.getLanguageId()}`);
 			// 坑 #2：文件此刻才打开，把之前缓存的诊断补设为波浪线
 			this._applyCachedMarkers(model);
 		};
