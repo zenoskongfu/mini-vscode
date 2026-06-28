@@ -51,10 +51,14 @@ export class IPCRouter {
   private configService = new ConfigService()
   private stateService = new StateService()
   private extManagementService = new ExtensionManagementService()
+  private registered = false
+  private disposed = false
 
   constructor(private windowManager: WindowManager) {}
 
   register(): void {
+    if (this.registered || this.disposed) return
+    this.registered = true
     this.registerWindowHandlers()
     this.registerFSHandlers()
     this.registerDialogHandlers()
@@ -62,6 +66,28 @@ export class IPCRouter {
     this.registerConfigHandlers()
     this.registerStateHandlers()
     this.registerExtensionHandlers()
+  }
+
+  async dispose(): Promise<void> {
+    if (this.disposed) return
+    this.disposed = true
+    this.removeHandlers()
+
+    await Promise.allSettled([
+      Promise.resolve().then(() => this.terminalService.dispose()),
+      this.fsService.dispose(),
+      this.configService.dispose()
+    ])
+  }
+
+  private removeHandlers(): void {
+    for (const channel of Object.values(IPC_CHANNELS)) {
+      try {
+        ipcMain.removeHandler(channel)
+      } catch {
+        // Handler may not have been registered if startup failed halfway.
+      }
+    }
   }
 
   private registerStateHandlers(): void {

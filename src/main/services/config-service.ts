@@ -26,9 +26,11 @@ export class ConfigService {
   private readonly file = path.join(this.dir, 'settings.json')
   private settings: Settings = { ...DEFAULT_SETTINGS }
   private watcher: FSWatcher | null = null
+  private disposed = false
 
   /** 加载配置（缺失时用默认值创建文件）；启动时调用一次 */
   init(mainWindow: BrowserWindow): void {
+    if (this.disposed) return
     try {
       if (!fs.existsSync(this.file)) {
         fs.mkdirSync(this.dir, { recursive: true })
@@ -75,6 +77,7 @@ export class ConfigService {
   }
 
   private startWatching(mainWindow: BrowserWindow): void {
+    if (this.watcher) return
     this.watcher = watch(this.file, { ignoreInitial: true })
     const reload = (): void => {
       const next = this.readFromDisk()
@@ -86,8 +89,11 @@ export class ConfigService {
     this.watcher.on('change', reload).on('add', reload)
   }
 
-  dispose(): void {
-    this.watcher?.close()
+  async dispose(): Promise<void> {
+    if (this.disposed) return
+    this.disposed = true
+    const watcher = this.watcher
     this.watcher = null
+    await watcher?.close()
   }
 }

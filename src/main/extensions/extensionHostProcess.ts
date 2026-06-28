@@ -12,8 +12,10 @@ import path from 'path'
  */
 export class ExtensionHost {
   private child: UtilityProcess | null = null
+  private disposed = false
 
   start(mainWindow: BrowserWindow): void {
+    if (this.disposed) return
     // 由 electron-vite 随 main 进程一起构建（见 vite 配置入口）
     const entry = path.join(__dirname, 'extensionHost.js')
 
@@ -28,8 +30,9 @@ export class ExtensionHost {
     const { port1, port2 } = new MessageChannelMain()
 
     this.child.on('spawn', () => {
+      if (this.disposed || !this.child) return
       // 把其中一个端口和初始化载荷交给扩展宿主
-      this.child!.postMessage({ extensionsDir }, [port1])
+      this.child.postMessage({ extensionsDir }, [port1])
       // 在 renderer webContents 就绪后，把另一个端口交给 renderer
       const send = (): void => {
         if (!mainWindow.isDestroyed()) {
@@ -49,8 +52,31 @@ export class ExtensionHost {
     })
   }
 
-  dispose(): void {
-    this.child?.kill()
+  async dispose(): Promise<void> {
+    if (this.disposed) return
+    this.disposed = true
+    const child = this.child
     this.child = null
+    if (!child) return
+
+    await new Promise<void>(resolve => {
+      let settled = false
+      let timeout: ReturnType<typeof setTimeout>
+      const finish = (): void => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
+        resolve()
+      }
+      timeout = setTimeout(finish, 1000)
+
+      child.once('exit', finish)
+      try {
+        if (!child.kill()) finish()
+      } catch (error) {
+        console.error('[main] failed to kill extension host', error)
+        finish()
+      }
+    })
   }
 }

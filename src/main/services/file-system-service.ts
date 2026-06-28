@@ -18,6 +18,7 @@ export interface FileChangeEvent {
 export class FileSystemService {
   /** 活跃的 chokidar watcher，以被监听的根路径为 key */
   private watchers = new Map<string, FSWatcher>()
+  private disposed = false
 
   // ── 读取操作 ─────────────────────────────────────────
 
@@ -77,6 +78,7 @@ export class FileSystemService {
    * mainWindow.webContents.send('fs:onChange', event) 把 FileChangeEvent 推给 renderer。
    */
   watchStart(rootPath: string, mainWindow: BrowserWindow): void {
+    if (this.disposed) return
     if (this.watchers.has(rootPath)) return  // 已经在监听
 
     const watcher = watch(rootPath, {
@@ -111,12 +113,19 @@ export class FileSystemService {
   async watchStop(rootPath: string): Promise<void> {
     const watcher = this.watchers.get(rootPath)
     if (!watcher) return
-    await watcher.close()
     this.watchers.delete(rootPath)
+    await watcher.close()
   }
 
   async stopAll(): Promise<void> {
-    await Promise.all([...this.watchers.values()].map(w => w.close()))
+    const watchers = [...this.watchers.values()]
     this.watchers.clear()
+    await Promise.allSettled(watchers.map(w => w.close()))
+  }
+
+  async dispose(): Promise<void> {
+    if (this.disposed) return
+    this.disposed = true
+    await this.stopAll()
   }
 }

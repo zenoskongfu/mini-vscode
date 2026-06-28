@@ -13,6 +13,7 @@ type IPty = pty.IPty
  */
 export class TerminalService {
   private terminals = new Map<string, IPty>()
+  private disposed = false
 
   private defaultShell(): string {
     if (process.platform === 'win32') {
@@ -22,6 +23,7 @@ export class TerminalService {
   }
 
   create(id: string, cwd: string | undefined, mainWindow: BrowserWindow): void {
+    if (this.disposed) return
     if (this.terminals.has(id)) return
 
     const shell = this.defaultShell()
@@ -51,7 +53,11 @@ export class TerminalService {
   }
 
   write(id: string, data: string): void {
-    this.terminals.get(id)?.write(data)
+    try {
+      this.terminals.get(id)?.write(data)
+    } catch {
+      // pty 已结束或 native 句柄正在释放时忽略输入
+    }
   }
 
   resize(id: string, cols: number, rows: number): void {
@@ -67,14 +73,29 @@ export class TerminalService {
   kill(id: string): void {
     const term = this.terminals.get(id)
     if (!term) return
-    term.kill()
     this.terminals.delete(id)
+    this.safeKill(term)
   }
 
   killAll(): void {
-    for (const term of this.terminals.values()) {
-      term.kill()
-    }
+    const terminals = [...this.terminals.values()]
     this.terminals.clear()
+    for (const term of terminals) {
+      this.safeKill(term)
+    }
+  }
+
+  dispose(): void {
+    if (this.disposed) return
+    this.disposed = true
+    this.killAll()
+  }
+
+  private safeKill(term: IPty): void {
+    try {
+      term.kill()
+    } catch (error) {
+      console.error('[main] failed to kill pty', error)
+    }
   }
 }
