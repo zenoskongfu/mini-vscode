@@ -13,3 +13,25 @@
   color: var(--color-fg-muted);
   font-size: var(--font-size-ui);
 }
+
+/* ── 调试装饰 ── */
+.debug-bp-glyph::before {
+  content: '';
+  display: block;
+  width: 10px;
+  height: 10px;
+  margin: 4px 0 0 4px;
+  border-radius: 50%;
+  background: #e51400; /* VSCode 断点红 */
+}
+.debug-stop-line {
+  background: rgba(255, 213, 0, 0.16);
+}
+.debug-stop-glyph::before {
+  content: '▶';
+  display: block;
+  margin-left: 3px;
+  color: #ffd500;
+  font-size: 11px;
+  line-height: 18px;
+}

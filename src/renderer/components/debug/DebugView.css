@@ -1,0 +1,112 @@
+.debug-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  font-size: var(--font-size-small);
+}
+
+.debug-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.debug-btn {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-fg-default);
+  cursor: pointer;
+}
+.debug-btn:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+}
+.debug-btn:disabled {
+  color: var(--color-fg-disabled);
+  cursor: default;
+}
+.debug-btn--start {
+  color: #89d185;
+}
+.debug-btn--stop {
+  color: #e51400;
+}
+.debug-status {
+  margin-left: auto;
+  color: var(--color-fg-muted);
+  font-family: var(--font-family-mono);
+}
+
+.debug-section {
+  border-bottom: 1px solid var(--color-border);
+}
+.debug-section__title {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-fg-muted);
+}
+.debug-section__body {
+  padding-bottom: 4px;
+}
+
+.debug-empty {
+  padding: 2px 12px 8px;
+  color: var(--color-fg-disabled);
+  font-style: italic;
+}
+
+.debug-frame {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 10px;
+  cursor: pointer;
+}
+.debug-frame:hover {
+  background: var(--color-bg-hover);
+}
+.debug-frame--active {
+  background: var(--color-bg-selected);
+}
+.debug-frame__name {
+  color: var(--color-fg-default);
+}
+.debug-frame__loc {
+  margin-left: auto;
+  color: var(--color-fg-muted);
+  font-family: var(--font-family-mono);
+}
+
+.debug-var {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 1px 8px;
+  cursor: default;
+  white-space: nowrap;
+}
+.debug-var:hover {
+  background: var(--color-bg-hover);
+}
+.debug-var__twist {
+  display: inline-block;
+  width: 12px;
+  color: var(--color-fg-muted);
+}
+.debug-var__name {
+  color: #9cdcfe;
+}
+.debug-var__value {
+  color: var(--color-fg-default);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

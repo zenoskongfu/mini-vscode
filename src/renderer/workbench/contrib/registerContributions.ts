@@ -8,6 +8,7 @@ import { IEditorService } from '../../services/editor/editorService'
 import { ITerminalService } from '../../services/terminal/terminalService'
 import { IConfigurationService } from '../../services/configuration/configurationService'
 import { IThemeService } from '../../services/theme/themeService'
+import { IDebugService } from '../../services/debug/debugService'
 
 /**
  * 注册内置命令及其默认快捷键。
@@ -25,6 +26,7 @@ export function registerWorkbenchContributions(insta: IInstantiationService): vo
   const terminalService = insta.get(ITerminalService)
   const configurationService = insta.get(IConfigurationService)
   const themeService = insta.get(IThemeService)
+  const debugService = insta.get(IDebugService)
 
   const register = (
     id: string,
@@ -54,6 +56,7 @@ export function registerWorkbenchContributions(insta: IInstantiationService): vo
   register('workbench.view.explorer', 'Show Explorer', 'View', showView('explorer'), 'mod+shift+e')
   register('workbench.view.search', 'Show Search', 'View', showView('search'), 'mod+shift+f')
   register('workbench.view.scm', 'Show Source Control', 'View', showView('scm'), 'mod+shift+g')
+  register('workbench.view.debug', 'Show Run and Debug', 'View', showView('debug'), 'mod+shift+d')
   register('workbench.view.extensions', 'Show Extensions', 'View', showView('extensions'), 'mod+shift+x')
 
   // ── 布局切换 ──
@@ -135,6 +138,26 @@ export function registerWorkbenchContributions(insta: IInstantiationService): vo
       if (terminalService.activeId) terminalService.closeTerminal(terminalService.activeId)
     }
   )
+
+  // ── 调试（Phase 14）──
+  register(
+    'workbench.action.debug.startOrContinue',
+    'Start / Continue Debugging',
+    'Debug',
+    () => {
+      if (debugService.status === 'inactive') {
+        layoutService.setActiveView('debug')
+        layoutService.setSidebarVisible(true)
+        void debugService.start()
+      } else if (debugService.status === 'stopped') {
+        void debugService.continue()
+      }
+    },
+    'f5'
+  )
+  register('workbench.action.debug.stepOver', 'Step Over', 'Debug', () => void debugService.next(), 'f10')
+  register('workbench.action.debug.stepInto', 'Step Into', 'Debug', () => void debugService.stepIn(), 'f11')
+  register('workbench.action.debug.stop', 'Stop Debugging', 'Debug', () => void debugService.stop(), 'shift+f5')
 
   // ── 偏好设置 ──
   register(

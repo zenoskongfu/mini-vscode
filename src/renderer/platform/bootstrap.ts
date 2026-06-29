@@ -18,6 +18,7 @@ import '../services/notification/notificationService'
 import '../services/language/languageFeaturesService'
 import '../services/extensions/extensionService'
 import '../services/diagnostics/diagnosticsService'
+import '../services/debug/debugService'
 
 /**
  * 从所有已注册单例构建根 InstantiationService。

@@ -36,6 +36,7 @@ export function ActivityBar({
     { id: 'explorer',   title: 'Explorer (Ctrl+Shift+E)',   icon: <ExplorerIcon /> },
     { id: 'search',     title: 'Search (Ctrl+Shift+F)',     icon: <SearchIcon /> },
     { id: 'scm',        title: 'Source Control (Ctrl+Shift+G)', icon: <SCMIcon /> },
+    { id: 'debug',      title: 'Run and Debug (Ctrl+Shift+D)', icon: <DebugIcon /> },
     { id: 'extensions', title: 'Extensions (Ctrl+Shift+X)', icon: <ExtensionsIcon /> },
   ]
 
@@ -141,6 +142,15 @@ function SCMIcon(): React.JSX.Element {
       <circle cx="17" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5" />
       <path d="M7 8.5v7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
       <path d="M7 8.5C7 8.5 7 11 10 11h4a3 3 0 003-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+    </svg>
+  )
+}
+
+function DebugIcon(): React.JSX.Element {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="11" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M12 6.5V4M9 7.5L7.5 6M15 7.5L16.5 6M7.5 11H5M16.5 11H19M8 14.5L6.5 16M16 14.5L17.5 16M12 15.5V18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   )
 }

@@ -3,7 +3,7 @@ import { registerSingleton } from '../../instantiation/extensions'
 import { Emitter, Event } from '../../base/event'
 import { IStorageService, StorageScope } from '../storage/storageService'
 
-export type ActivityView = 'explorer' | 'search' | 'scm' | 'extensions' | 'settings'
+export type ActivityView = 'explorer' | 'search' | 'scm' | 'debug' | 'extensions' | 'settings'
 
 export interface CursorPosition {
   line: number

@@ -141,6 +141,13 @@ export function injectElectronAPIMock(): void {
         return Promise.resolve()
       }
     },
+    debug: {
+      start: () => Promise.resolve(),
+      request: () => Promise.resolve({}),
+      setBreakpoints: () => Promise.resolve(),
+      stop: () => Promise.resolve(),
+      onEvent: () => () => undefined
+    },
     dialog: {
       openFolder: () => Promise.resolve(FAKE_ROOT),
       openFile: () => Promise.resolve(null),

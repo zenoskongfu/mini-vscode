@@ -51,6 +51,16 @@ export interface ElectronAPI {
     get: () => Promise<Record<string, unknown>>
     set: (partial: Record<string, unknown>) => Promise<void>
   }
+  debug: {
+    start: (
+      config: { type?: string; request?: string; program?: string; name?: string },
+      breakpoints: { path: string; lines: number[] }[]
+    ) => Promise<void>
+    request: (command: string, args?: unknown) => Promise<unknown>
+    setBreakpoints: (path: string, lines: number[]) => Promise<void>
+    stop: () => Promise<void>
+    onEvent: (cb: (e: { event: string; body: unknown }) => void) => () => void
+  }
   dialog: {
     openFolder: () => Promise<string | null>
     openFile: () => Promise<string | null>

@@ -1,7 +1,7 @@
 import { createDecorator } from "../../instantiation/instantiation";
 import { registerSingleton } from "../../instantiation/extensions";
 import type { IDisposable } from "../../base/lifecycle";
-import { monaco } from "../monaco-setup";
+import { monaco, getLanguageForPath } from "../monaco-setup";
 import { IEditorService } from "../editor/editorService";
 import { RPCProtocol } from "../../../platform/rpc/rpcProtocol";
 import {
@@ -124,8 +124,12 @@ export class LanguageFeaturesService implements ILanguageFeaturesService {
 					line: position.lineNumber - 1, // monaco 1-based → vscode 0-based
 					character: position.column - 1,
 				});
+				// 确保每个定义目标文件都有 model：否则 Monaco 的 peek/跳转走
+				// createModelReference 时会抛 "Model not found"（目标未打开，或 scheme 不匹配）。
+				await Promise.all(dtos.map((d) => this._ensureModel(d.uri.path)));
 				return dtos.map((dto) => ({
-					uri: monaco.Uri.from({ scheme: dto.uri.scheme || "file", path: dto.uri.path }),
+					// 用 Uri.parse 与 @monaco-editor/react 的 model uri 对齐（scheme 为空串）
+					uri: monaco.Uri.parse(dto.uri.path),
 					range: {
 						startLineNumber: dto.range.start.line + 1, // vscode 0-based → monaco 1-based
 						startColumn: dto.range.start.character + 1,
@@ -136,6 +140,19 @@ export class LanguageFeaturesService implements ILanguageFeaturesService {
 			},
 		});
 		this._providers.set(handle, disposable);
+	}
+
+	/** 定义目标若没有对应 model，从磁盘读内容建一个（uri 用 Uri.parse 对齐编辑器侧） */
+	private async _ensureModel(path: string): Promise<void> {
+		const uri = monaco.Uri.parse(path);
+		if (monaco.editor.getModel(uri)) return;
+		if (monaco.editor.getModels().some((m) => m.uri.path === path)) return;
+		try {
+			const content = await window.electronAPI.fs.readFile(path);
+			monaco.editor.createModel(content, getLanguageForPath(path), uri);
+		} catch {
+			/* 读不到就算了；实际跳转仍有 editorOpener 兜底 */
+		}
 	}
 
 	// ── 诊断（Phase 13.3）──────────────────────────────────────

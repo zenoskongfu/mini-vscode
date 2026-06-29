@@ -1,6 +1,7 @@
 import React from 'react'
 import { FileExplorer } from '../components/explorer/FileExplorer'
 import { ExtensionsView } from '../components/extensions/ExtensionsView'
+import { DebugView } from '../components/debug/DebugView'
 import './Sidebar.css'
 
 interface SidebarProps {
@@ -14,6 +15,7 @@ export function Sidebar({ className = '', activeView, onOpenFile }: SidebarProps
     explorer:   'EXPLORER',
     search:     'SEARCH',
     scm:        'SOURCE CONTROL',
+    debug:      'RUN AND DEBUG',
     extensions: 'EXTENSIONS',
     settings:   'SETTINGS'
   }
@@ -28,6 +30,8 @@ export function Sidebar({ className = '', activeView, onOpenFile }: SidebarProps
           <FileExplorer onOpenFile={onOpenFile} />
         ) : activeView === 'extensions' ? (
           <ExtensionsView />
+        ) : activeView === 'debug' ? (
+          <DebugView />
         ) : (
           <SidebarPlaceholder view={activeView} />
         )}

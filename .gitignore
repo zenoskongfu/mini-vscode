@@ -2,6 +2,7 @@ node_modules
 out
 dist
 *.local
+extensions
 
 # macOS
 .DS_Store

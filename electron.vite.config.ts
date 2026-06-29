@@ -11,7 +11,10 @@ export default defineConfig({
           index: resolve(__dirname, 'src/main/index.ts'),
           // 扩展宿主运行在 utilityProcess 中；作为独立入口构建
           // → out/main/extensionHost.js（由 ExtensionHost.start() 拉起）。
-          extensionHost: resolve(__dirname, 'src/exthost/extensionHostMain.ts')
+          extensionHost: resolve(__dirname, 'src/exthost/extensionHostMain.ts'),
+          // mock 调试适配器（DAP over stdio），独立入口 → out/main/mockDapAdapter.js
+          // （由 DebugService 以 Node 模式 spawn）。
+          mockDapAdapter: resolve(__dirname, 'src/main/mock-dap-adapter.ts')
         }
       }
     }

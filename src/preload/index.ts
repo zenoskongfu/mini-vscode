@@ -97,6 +97,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
     set: (partial: unknown) => ipcRenderer.invoke('state:set', partial)
   },
 
+  // 调试 — Phase 14（DAP 客户端在主进程，事件单向推）
+  debug: {
+    start: (config: unknown, breakpoints: unknown) =>
+      ipcRenderer.invoke('debug:start', config, breakpoints),
+    request: (command: string, args: unknown) => ipcRenderer.invoke('debug:request', command, args),
+    setBreakpoints: (path: string, lines: number[]) =>
+      ipcRenderer.invoke('debug:setBreakpoints', path, lines),
+    stop: () => ipcRenderer.invoke('debug:stop'),
+    onEvent: (cb: (e: { event: string; body: unknown }) => void) => {
+      const listener = (_: unknown, e: { event: string; body: unknown }): void => cb(e)
+      ipcRenderer.on('debug:event', listener as never)
+      return () => ipcRenderer.removeListener('debug:event', listener as never)
+    }
+  },
+
   // 对话框
   dialog: {
     openFolder: () => ipcRenderer.invoke('dialog:openFolder'),

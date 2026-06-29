@@ -4,6 +4,7 @@ import { FileSystemService } from './services/file-system-service'
 import { TerminalService } from './services/terminal-service'
 import { ConfigService } from './services/config-service'
 import { StateService } from './services/state-service'
+import { DebugService } from './services/debug-service'
 import { ExtensionManagementService } from './extensions/extensionManagementService'
 
 export const IPC_CHANNELS = {
@@ -33,6 +34,10 @@ export const IPC_CHANNELS = {
   CONFIG_GET_PATH: 'config:getPath',
   STATE_GET: 'state:get',
   STATE_SET: 'state:set',
+  DEBUG_START: 'debug:start',
+  DEBUG_REQUEST: 'debug:request',
+  DEBUG_SET_BREAKPOINTS: 'debug:setBreakpoints',
+  DEBUG_STOP: 'debug:stop',
   EXT_LIST_GALLERY: 'ext:listGallery',
   EXT_INSTALL: 'ext:install',
   EXT_UNINSTALL: 'ext:uninstall',
@@ -50,6 +55,7 @@ export class IPCRouter {
   private terminalService = new TerminalService()
   private configService = new ConfigService()
   private stateService = new StateService()
+  private debugService = new DebugService()
   private extManagementService = new ExtensionManagementService()
   private registered = false
   private disposed = false
@@ -65,7 +71,27 @@ export class IPCRouter {
     this.registerTerminalHandlers()
     this.registerConfigHandlers()
     this.registerStateHandlers()
+    this.registerDebugHandlers()
     this.registerExtensionHandlers()
+  }
+
+  private registerDebugHandlers(): void {
+    ipcMain.handle(IPC_CHANNELS.DEBUG_START, (_e, config: unknown, breakpoints: unknown) => {
+      const win = this.windowManager.getMainWindow()
+      if (win)
+        return this.debugService.start(
+          win,
+          config as { program?: string },
+          breakpoints as { path: string; lines: number[] }[]
+        )
+    })
+    ipcMain.handle(IPC_CHANNELS.DEBUG_REQUEST, (_e, command: string, args: unknown) =>
+      this.debugService.request(command, args)
+    )
+    ipcMain.handle(IPC_CHANNELS.DEBUG_SET_BREAKPOINTS, (_e, filePath: string, lines: number[]) =>
+      this.debugService.setBreakpoints(filePath, lines)
+    )
+    ipcMain.handle(IPC_CHANNELS.DEBUG_STOP, () => this.debugService.stop())
   }
 
   async dispose(): Promise<void> {
