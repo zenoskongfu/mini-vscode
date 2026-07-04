@@ -1,5 +1,7 @@
-import React from 'react'
-import type { EditorTab } from '../../services/editor/editorService'
+import React, { useState } from 'react'
+import { IEditorService, type EditorTab } from '../../services/editor/editorService'
+import { useService } from '../../platform/ServicesContext'
+import { ContextMenu, type ContextMenuEntry } from '../context-menu/ContextMenu'
 import './EditorTabs.css'
 
 interface EditorTabsProps {
@@ -19,6 +21,17 @@ export function EditorTabs({
   onActivate,
   onClose
 }: EditorTabsProps): React.JSX.Element {
+  const editorService = useService(IEditorService)
+  const [menu, setMenu] = useState<{ x: number; y: number; path: string } | null>(null)
+
+  const menuItems = (path: string): ContextMenuEntry[] => [
+    { label: 'Close', onClick: () => onClose(path) },
+    { label: 'Close Others', onClick: () => editorService.closeOthers(path) },
+    { label: 'Close to the Right', onClick: () => editorService.closeToRight(path) },
+    { separator: true },
+    { label: 'Close All', onClick: () => editorService.closeAll() }
+  ]
+
   return (
     <div className="editor-tabs" role="tablist">
       {tabs.map(tab => {
@@ -30,6 +43,10 @@ export function EditorTabs({
             aria-selected={active}
             className={`editor-tab ${active ? 'editor-tab--active' : ''}`}
             onClick={() => onActivate(tab.path)}
+            onContextMenu={e => {
+              e.preventDefault()
+              setMenu({ x: e.clientX, y: e.clientY, path: tab.path })
+            }}
             onMouseDown={e => {
               // 鼠标中键关闭
               if (e.button === 1) { e.preventDefault(); onClose(tab.path) }
@@ -51,6 +68,14 @@ export function EditorTabs({
           </div>
         )
       })}
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          items={menuItems(menu.path)}
+          onClose={() => setMenu(null)}
+        />
+      )}
     </div>
   )
 }

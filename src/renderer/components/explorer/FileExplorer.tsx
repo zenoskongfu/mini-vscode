@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react'
 import { useService } from '../../platform/ServicesContext'
 import { useEvent } from '../../platform/useEvent'
 import { IWorkspaceService } from '../../services/workspace/workspaceService'
+import { IExplorerService } from '../../services/explorer/explorerService'
 import { useDirectoryChildren } from './useDirectoryChildren'
 import { FileTree } from './FileTree'
 import './FileExplorer.css'
@@ -53,6 +54,7 @@ function WorkspaceView({
   onOpenFile: (path: string) => void
 }): React.JSX.Element {
   const workspaceService = useService(IWorkspaceService)
+  const explorerService = useService(IExplorerService)
   const folderName = root.split('/').pop() ?? root
   const { reload } = useDirectoryChildren(root)
   const [creating, setCreating] = useState<'file' | 'folder' | null>(null)
@@ -61,16 +63,19 @@ function WorkspaceView({
   const commitCreate = useCallback(async () => {
     const name = newName.trim()
     if (name) {
+      // 在「选中的目录」下创建（无选中则工作区根）——#2
+      const dir = explorerService.getCreateTargetDir(root)
       if (creating === 'file') {
-        await window.electronAPI.fs.createFile(`${root}/${name}`)
+        await window.electronAPI.fs.createFile(`${dir}/${name}`)
       } else {
-        await window.electronAPI.fs.createDir(`${root}/${name}`)
+        await window.electronAPI.fs.createDir(`${dir}/${name}`)
       }
       reload()
+      explorerService.refresh(dir)
     }
     setCreating(null)
     setNewName('')
-  }, [creating, newName, root, reload])
+  }, [creating, newName, root, reload, explorerService])
 
   return (
     <div className="file-explorer">

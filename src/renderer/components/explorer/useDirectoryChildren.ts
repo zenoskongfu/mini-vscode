@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { FileNode, FileChangeEvent } from '../../types/file-tree'
+import { useService } from '../../platform/ServicesContext'
+import { IExplorerService } from '../../services/explorer/explorerService'
 
 /**
  * 按需加载某个目录的子节点，并通过监听影响该目录的 fs:onChange 事件保持新鲜。
@@ -14,6 +16,7 @@ export function useDirectoryChildren(dirPath: string | null): {
 } {
   const [children, setChildren] = useState<FileNode[]>([])
   const [loading, setLoading] = useState(false)
+  const explorerService = useService(IExplorerService)
 
   const load = useCallback(async () => {
     if (!dirPath) {
@@ -45,6 +48,15 @@ export function useDirectoryChildren(dirPath: string | null): {
     })
     return cleanup
   }, [dirPath, load])
+
+  // ExplorerService 定向刷新（新建/重命名/删除后立即生效，不只靠 fs watch）
+  useEffect(() => {
+    if (!dirPath) return
+    const d = explorerService.onDidRequestRefresh(p => {
+      if (p === dirPath) load()
+    })
+    return () => d.dispose()
+  }, [explorerService, dirPath, load])
 
   return { children, loading, reload: load }
 }

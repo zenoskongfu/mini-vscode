@@ -6,6 +6,7 @@ import { getSingletonServiceDescriptors } from '../instantiation/extensions'
 // （每个模块会在导入时把自己注册进单例注册表。）
 import '../services/storage/storageService'
 import '../services/workspace/workspaceService'
+import '../services/explorer/explorerService'
 import '../services/editor/editorService'
 import '../services/layout/layoutService'
 import '../services/commands/commandService'

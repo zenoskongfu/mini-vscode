@@ -44,9 +44,11 @@
       "output": "dist"
     },
     "files": [
-      "out/**/*",
-      "extensions/**/*",
-      "gallery/**/*"
+      "out/**/*"
+    ],
+    "extraResources": [
+      { "from": "gallery", "to": "gallery" },
+      { "from": "extensions", "to": "builtin-extensions" }
     ],
     "mac": {
       "target": "dmg",

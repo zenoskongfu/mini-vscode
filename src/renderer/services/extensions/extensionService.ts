@@ -220,6 +220,8 @@ export class ExtensionService implements IExtensionService {
 			await this._refreshInstalled();
 			// 新装的 * / 启动扩展应立即激活（会经广播把 status 置为 active）
 			await this._extHostExtensions.$activateByEvent("onStartupFinished");
+			// 已打开的文件不会再触发 onDidCreateModel，主动按当前语言激活 onLanguage 扩展（如 ts-lsp），免重启
+			this.languageFeatures.activateOpenLanguages();
 		} finally {
 			this._clearTransient(id, "installing");
 		}
@@ -249,6 +251,8 @@ export class ExtensionService implements IExtensionService {
 		if (enabled) {
 			// 重新激活 * / 启动扩展（懒激活扩展仍等命令触发）
 			await this._extHostExtensions.$activateByEvent("onStartupFinished");
+			// 对已打开文档按语言激活 onLanguage 扩展，免重启
+			this.languageFeatures.activateOpenLanguages();
 		} else {
 			// 停用正在运行的实例（调 deactivate、释放 subscriptions、反注册命令）
 			await this._extHostExtensions.$deactivate(id);

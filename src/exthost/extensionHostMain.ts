@@ -70,7 +70,7 @@ class ExtHostExtensionService implements ExtHostExtensionServiceShape {
 	private readonly _mainMessage: MainThreadMessageShape;
 
 	constructor(
-		private readonly extensionsDir: string,
+		private readonly extensionDirs: string[],
 		private readonly rpc: RPCProtocol,
 		private readonly extHostCommands: ExtHostCommands,
 		private readonly extHostLanguageFeatures: ExtHostLanguageFeatures,
@@ -85,33 +85,36 @@ class ExtHostExtensionService implements ExtHostExtensionServiceShape {
 	}
 
 	scan(): void {
-		this._extensions = [];
-		let entries: string[] = [];
-		try {
-			entries = fs.readdirSync(this.extensionsDir);
-		} catch {
-			console.warn("[ExtHost] no extensions dir:", this.extensionsDir);
-			return;
-		}
-		for (const name of entries) {
-			const dir = path.join(this.extensionsDir, name);
-			const manifestPath = path.join(dir, "package.json");
-			if (!fs.existsSync(manifestPath)) continue;
+		// 扫描多套目录（内置只读 + 用户可写）；同 id 时后扫的覆盖（用户覆盖内置）
+		const byId = new Map<string, ExtensionDescription>();
+		for (const baseDir of this.extensionDirs) {
+			let entries: string[] = [];
 			try {
-				const m = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
-				this._extensions.push({
-					id: m.name,
-					name: m.name,
-					displayName: m.displayName,
-					main: m.main,
-					activationEvents: m.activationEvents ?? [],
-					contributes: m.contributes ?? {},
-					extensionPath: dir,
-				});
-			} catch (e) {
-				console.error("[ExtHost] bad manifest", manifestPath, e);
+				entries = fs.readdirSync(baseDir);
+			} catch {
+				continue; // 目录不存在（如 userData/extensions 尚未创建）→ 跳过
+			}
+			for (const name of entries) {
+				const dir = path.join(baseDir, name);
+				const manifestPath = path.join(dir, "package.json");
+				if (!fs.existsSync(manifestPath)) continue;
+				try {
+					const m = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+					byId.set(m.name, {
+						id: m.name,
+						name: m.name,
+						displayName: m.displayName,
+						main: m.main,
+						activationEvents: m.activationEvents ?? [],
+						contributes: m.contributes ?? {},
+						extensionPath: dir,
+					});
+				} catch (e) {
+					console.error("[ExtHost] bad manifest", manifestPath, e);
+				}
 			}
 		}
+		this._extensions = [...byId.values()];
 		console.log(
 			`[ExtHost] scanned ${this._extensions.length} extension(s):`,
 			this._extensions.map((e) => e.id)
@@ -252,7 +255,7 @@ const parentPort = (
 ).parentPort;
 
 parentPort.once("message", (e) => {
-	const init = e.data as { extensionsDir: string };
+	const init = e.data as { builtinExtensionsDir: string; userExtensionsDir: string };
 	// 接受port对象
 	const port = e.ports[0] as {
 		start(): void;
@@ -277,7 +280,7 @@ parentPort.once("message", (e) => {
 	const extHostDiagnostics = new ExtHostDiagnostics(rpc);
 
 	const extService = new ExtHostExtensionService(
-		init.extensionsDir,
+		[init.builtinExtensionsDir, init.userExtensionsDir],
 		rpc,
 		extHostCommands,
 		extHostLanguageFeatures,
@@ -287,5 +290,5 @@ parentPort.once("message", (e) => {
 	rpc.set(ExtHostContext.ExtHostExtensionService, extService);
 	extService.scan();
 
-	console.log("[ExtHost] ready, extensionsDir =", init.extensionsDir);
+	console.log("[ExtHost] ready, dirs =", init.builtinExtensionsDir, init.userExtensionsDir);
 });

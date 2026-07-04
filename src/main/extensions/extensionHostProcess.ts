@@ -1,5 +1,6 @@
-import { utilityProcess, MessageChannelMain, app, type BrowserWindow, type UtilityProcess } from 'electron'
+import { utilityProcess, MessageChannelMain, type BrowserWindow, type UtilityProcess } from 'electron'
 import path from 'path'
+import { getBuiltinExtensionsDir, getUserExtensionsDir } from '../paths'
 
 /**
  * 启动扩展宿主（Node utilityProcess），并转交一对 MessagePort，
@@ -19,8 +20,9 @@ export class ExtensionHost {
     // 由 electron-vite 随 main 进程一起构建（见 vite 配置入口）
     const entry = path.join(__dirname, 'extensionHost.js')
 
-    // 内置扩展位于 <appRoot>/extensions（开发态为项目根目录）
-    const extensionsDir = path.join(app.getAppPath(), 'extensions')
+    // 内置扩展（只读）+ 用户安装扩展（可写）两套目录，扩展宿主都要扫描
+    const builtinExtensionsDir = getBuiltinExtensionsDir()
+    const userExtensionsDir = getUserExtensionsDir()
 
     this.child = utilityProcess.fork(entry, [], {
       stdio: 'inherit', // 将 ExtHost 的 console.* 输出到 main 终端
@@ -32,7 +34,7 @@ export class ExtensionHost {
     this.child.on('spawn', () => {
       if (this.disposed || !this.child) return
       // 把其中一个端口和初始化载荷交给扩展宿主
-      this.child.postMessage({ extensionsDir }, [port1])
+      this.child.postMessage({ builtinExtensionsDir, userExtensionsDir }, [port1])
       // 在 renderer webContents 就绪后，把另一个端口交给 renderer
       const send = (): void => {
         if (!mainWindow.isDestroyed()) {

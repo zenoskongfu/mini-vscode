@@ -20,6 +20,8 @@ export interface ILanguageFeaturesService {
 	readonly _serviceBrand: undefined;
 	/** 在扩展宿主 RPC 通道建立后调用一次：接好语言特性桥 + 文档同步 */
 	attach(rpc: RPCProtocol): void;
+	/** 对当前所有打开文档的语言重新派发 onLanguage:（装/启用扩展后调用，免重启） */
+	activateOpenLanguages(): void;
 }
 
 export const ILanguageFeaturesService = createDecorator<ILanguageFeaturesService>("languageFeaturesService");
@@ -95,6 +97,13 @@ export class LanguageFeaturesService implements ILanguageFeaturesService {
 				},
 			});
 		}
+	}
+
+	/** 装/启用扩展后：已打开的文件不会再触发 onDidCreateModel，主动按当前语言重派发 */
+	activateOpenLanguages(): void {
+		if (!this._extHostExtensions) return;
+		const langs = new Set(monaco.editor.getModels().map((m) => m.getLanguageId()));
+		for (const lang of langs) this._extHostExtensions.$activateByEvent(`onLanguage:${lang}`);
 	}
 
 	private _uri(model: { uri: { scheme: string; path: string } }): UriComponents {
