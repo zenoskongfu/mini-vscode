@@ -81,7 +81,7 @@ export class IPCRouter {
       if (win)
         return this.debugService.start(
           win,
-          config as { program?: string },
+          config as { type?: string; request?: 'launch' | 'attach'; program?: string },
           breakpoints as { path: string; lines: number[] }[]
         )
     })

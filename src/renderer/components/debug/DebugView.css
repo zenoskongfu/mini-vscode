@@ -110,3 +110,65 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.debug-watch__item {
+  display: flex;
+  gap: 8px;
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+.debug-watch__expr {
+  color: #9cdcfe;
+}
+.debug-watch__value {
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--color-fg-default);
+  text-overflow: ellipsis;
+}
+
+.debug-console__entries {
+  max-height: 160px;
+  overflow: auto;
+  padding: 2px 0;
+  font-family: var(--font-family-mono);
+}
+.debug-console__entry {
+  padding: 1px 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.debug-console__entry--input {
+  color: #9cdcfe;
+}
+.debug-console__entry--result {
+  color: var(--color-fg-default);
+}
+.debug-console__entry--output {
+  color: var(--color-fg-muted);
+}
+.debug-console__entry--error {
+  color: #f48771;
+}
+
+.debug-inline-form {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 6px;
+}
+.debug-input {
+  min-width: 0;
+  flex: 1;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  outline: none;
+  background: var(--color-bg-input);
+  color: var(--color-fg-default);
+  font: inherit;
+}
+.debug-input:focus {
+  border-color: var(--color-border-focus);
+}

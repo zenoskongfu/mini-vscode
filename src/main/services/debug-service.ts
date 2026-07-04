@@ -1,165 +1,274 @@
-import cp from "child_process";
-import path from "path";
-import type { BrowserWindow } from "electron";
+import cp from 'child_process'
+import fs from 'fs'
+import net from 'net'
+import path from 'path'
+import type { BrowserWindow } from 'electron'
+import { DebugSession, type DapAdapter } from '../debug/dap-session'
 
 interface BreakpointSet {
-	path: string;
-	lines: number[];
+  path: string
+  lines: number[]
 }
+
 interface LaunchConfig {
-	type?: string;
-	request?: string;
-	program?: string;
-	name?: string;
+  type?: string
+  request?: 'launch' | 'attach'
+  program?: string
+  name?: string
+  cwd?: string
+  debugServer?: number
+  adapterHost?: string
+  adapterCommand?: string
+  adapterArgs?: string[]
+  adapterEnv?: Record<string, string>
+  adapterCwd?: string
+  [key: string]: unknown
+}
+
+interface VerifiedBreakpoint {
+  verified?: boolean
+  line?: number
+  message?: string
+}
+
+interface BreakpointSyncResult {
+  path: string
+  breakpoints: VerifiedBreakpoint[]
+}
+
+interface DebugStartResult {
+  breakpointSets: BreakpointSyncResult[]
 }
 
 /**
- * DebugService（main 进程）—— Phase 14 的 DAP 客户端 + 会话管理。
+ * DebugService（main 进程）—— 选择 adapter + 驱动 DebugSession。
  *
- * spawn 一个 debug adapter 子进程（当前是 out/main/mockDapAdapter.js；之后换
- * @vscode/js-debug 只改 spawn），讲 DAP over stdio（Content-Length 分帧 + seq
- * 请求/响应/事件）。渲染层经 IPC 调 request/start/stop，事件用 webContents.send
- * 单向推（模式同终端 Phase 5）。对应 VSCode 的 DebugSession。
+ * renderer 只通过 IPC 调 start/request/setBreakpoints/stop；这里保留 main
+ * 进程作为 mini 版 DAP client 的架构选择。真正的 DAP 分帧、pending
+ * request、event fan-out 与 transport 生命周期由 DebugSession 负责。
  */
 export class DebugService {
-	private child: cp.ChildProcessWithoutNullStreams | null = null;
-	private win: BrowserWindow | null = null;
-	private readonly pending = new Map<number, (body: unknown) => void>();
-	private readonly eventWaiters: { name: string; resolve: () => void }[] = [];
-	private seq = 1;
-	private buf = Buffer.alloc(0);
-	private contentLen = -1;
+  private session: DebugSession | null = null
+  private win: BrowserWindow | null = null
+  private unsubscribeEvents: (() => void) | null = null
+  private managedAdapterProcess: cp.ChildProcessWithoutNullStreams | null = null
 
-	/** 启动会话：spawn adapter + 完整 DAP 握手 + launch */
-	async start(win: BrowserWindow, config: LaunchConfig, breakpoints: BreakpointSet[]): Promise<void> {
-		this.win = win;
-		this.stop();
+  async start(win: BrowserWindow, config: LaunchConfig, breakpoints: BreakpointSet[]): Promise<DebugStartResult> {
+    this.win = win
+    await this.stop()
 
-		const adapter = path.join(__dirname, "mockDapAdapter.js");
-		this.child = cp.spawn(process.execPath, [adapter], {
-			env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
-			stdio: ["pipe", "pipe", "inherit"],
-		}) as unknown as cp.ChildProcessWithoutNullStreams;
+    const session = new DebugSession(await this.resolveAdapter(config))
+    this.session = session
+    this.unsubscribeEvents = session.onEvent((event, body) => this.forwardEvent(event, body))
+    try {
+      await session.start()
 
-		this.child.stdout.on("data", (d) => this.onData(d));
-		this.child.on("exit", () => {
-			this.child = null;
-		});
+      const initialized = session.waitEvent('initialized', 15000)
+      await session.request('initialize', {
+        adapterID: config.type ?? 'mock',
+        linesStartAt1: true,
+        columnsStartAt1: true,
+        pathFormat: 'path'
+      }, 15000)
 
-		await this.request("initialize", {
-			adapterID: config.type ?? "mock",
-			linesStartAt1: true,
-			columnsStartAt1: true,
-		});
+      const dapConfig = toDapLaunchConfig(config)
+      const startCommand = config.request === 'attach' ? 'attach' : 'launch'
+      const started = session.request(startCommand, dapConfig, 30000)
+      await initialized
 
-		const launched = this.request("launch", { ...config }); // 不阻塞等 stop
-		await this.waitEvent("initialized");
-		for (const bp of breakpoints) {
-			await this.request("setBreakpoints", {
-				source: { path: bp.path, name: path.basename(bp.path) },
-				breakpoints: bp.lines.map((line) => ({ line })),
-			});
-		}
-		await this.request("configurationDone", {});
-		await launched;
-	}
+      const breakpointSets: BreakpointSyncResult[] = []
+      for (const bp of breakpoints) {
+        const body = await session.request('setBreakpoints', {
+          source: { path: bp.path, name: path.basename(bp.path) },
+          breakpoints: bp.lines.map((line) => ({ line })),
+        })
+        breakpointSets.push({
+          path: bp.path,
+          breakpoints: normalizeBreakpoints(body, bp.lines)
+        })
+      }
 
-	/** 转发任意 DAP 请求（continue/next/stepIn/stepOut/stackTrace/scopes/variables/evaluate/threads） */
-	request(command: string, args?: unknown): Promise<unknown> {
-		if (!this.child) return Promise.resolve(undefined);
-		const seq = this.seq++;
-		return new Promise((resolve) => {
-			this.pending.set(seq, resolve);
-			this.send({ seq, type: "request", command, arguments: args });
-		});
-	}
+      await session.request('configurationDone', {}, 15000)
+      await started
+      return { breakpointSets }
+    } catch (err) {
+      await this.stop()
+      throw err
+    }
+  }
 
-	/** 会话中途增删断点 */
-	async setBreakpoints(filePath: string, lines: number[]): Promise<void> {
-		if (!this.child) return;
-		await this.request("setBreakpoints", {
-			source: { path: filePath, name: path.basename(filePath) },
-			breakpoints: lines.map((line) => ({ line })),
-		});
-	}
+  request(command: string, args?: unknown): Promise<unknown> {
+    if (!this.session) return Promise.resolve(undefined)
+    return this.session.request(command, args)
+  }
 
-	stop(): void {
-		if (!this.child) return;
-		try {
-			this.send({
-				seq: this.seq++,
-				type: "request",
-				command: "disconnect",
-				arguments: { terminateDebuggee: true },
-			});
-		} catch {
-			/* ignore */
-		}
-		this.child.kill();
-		this.child = null;
-		this.pending.clear();
-		this.buf = Buffer.alloc(0);
-		this.contentLen = -1;
-	}
+  async setBreakpoints(filePath: string, lines: number[]): Promise<{ breakpoints: VerifiedBreakpoint[] } | undefined> {
+    if (!this.session) return undefined
+    const body = await this.session.request('setBreakpoints', {
+      source: { path: filePath, name: path.basename(filePath) },
+      breakpoints: lines.map((line) => ({ line })),
+    })
+    return { breakpoints: normalizeBreakpoints(body, lines) }
+  }
 
-	// ── 内部 ──────────────────────────────────────────────
+  async stop(): Promise<void> {
+    const session = this.session
+    this.session = null
+    this.unsubscribeEvents?.()
+    this.unsubscribeEvents = null
+    if (session) await session.disconnectAndStop()
+    this.stopManagedAdapterProcess()
+  }
 
-	private send(msg: Record<string, unknown>): void {
-		const json = JSON.stringify(msg);
-		this.child?.stdin.write(`Content-Length: ${Buffer.byteLength(json, "utf8")}\r\n\r\n${json}`);
-	}
+  private async resolveAdapter(config: LaunchConfig): Promise<DapAdapter> {
+    if (typeof config.debugServer === 'number') {
+      return {
+        kind: 'tcp',
+        host: typeof config.adapterHost === 'string' ? config.adapterHost : '127.0.0.1',
+        port: config.debugServer
+      }
+    }
 
-	private waitEvent(name: string, ms = 5000): Promise<void> {
-		return new Promise((resolve, reject) => {
-			const w = { name, resolve };
-			this.eventWaiters.push(w);
-			setTimeout(() => {
-				const i = this.eventWaiters.indexOf(w);
-				if (i >= 0) {
-					this.eventWaiters.splice(i, 1);
-					reject(new Error("debug: timeout waiting " + name));
-				}
-			}, ms);
-		});
-	}
+    if (typeof config.adapterCommand === 'string' && config.adapterCommand.trim()) {
+      return {
+        kind: 'stdio',
+        command: config.adapterCommand,
+        args: Array.isArray(config.adapterArgs) ? config.adapterArgs.map(String) : [],
+        cwd: typeof config.adapterCwd === 'string' ? config.adapterCwd : undefined,
+        env: isStringRecord(config.adapterEnv) ? config.adapterEnv : undefined
+      }
+    }
 
-	private onData(chunk: Buffer): void {
-		this.buf = Buffer.concat([this.buf, chunk]);
-		for (;;) {
-			if (this.contentLen < 0) {
-				const i = this.buf.indexOf("\r\n\r\n");
-				if (i < 0) break;
-				const m = /Content-Length:\s*(\d+)/i.exec(this.buf.subarray(0, i).toString("ascii"));
-				this.contentLen = m ? parseInt(m[1], 10) : 0;
-				this.buf = this.buf.subarray(i + 4);
-			}
-			if (this.buf.length < this.contentLen) break;
-			const body = this.buf.subarray(0, this.contentLen).toString("utf8");
-			this.buf = this.buf.subarray(this.contentLen);
-			this.contentLen = -1;
-			let msg: { type: string; request_seq?: number; body?: unknown; event?: string };
-			try {
-				msg = JSON.parse(body);
-			} catch {
-				continue;
-			}
-			if (msg.type === "response" && msg.request_seq !== undefined) {
-				const resolve = this.pending.get(msg.request_seq);
-				this.pending.delete(msg.request_seq);
-				resolve?.(msg.body);
-			} else if (msg.type === "event" && msg.event) {
-				// 内部一次性等待（如 initialized）
-				const wi = this.eventWaiters.findIndex((w) => w.name === msg.event);
-				if (wi >= 0) {
-					const w = this.eventWaiters[wi];
-					this.eventWaiters.splice(wi, 1);
-					w.resolve();
-				}
-				// 推给渲染层（stopped/continued/terminated/output…）
-				if (this.win && !this.win.isDestroyed()) {
-					this.win.webContents.send("debug:event", { event: msg.event, body: msg.body });
-				}
-			}
-		}
-	}
+    if (!config.type || config.type === 'mock') {
+      return {
+        kind: 'stdio',
+        command: process.execPath,
+        args: [path.join(__dirname, 'mockDapAdapter.js')],
+        env: { ELECTRON_RUN_AS_NODE: '1' }
+      }
+    }
+
+    if (config.type === 'node' || config.type === 'pwa-node') {
+      return this.startManagedJsDebugServer()
+    }
+
+    throw new Error(
+      `No debug adapter configured for type "${config.type}". ` +
+      'Use "debugServer" for a standalone DAP server or "adapterCommand"/"adapterArgs" for a stdio adapter.'
+    )
+  }
+
+  private forwardEvent(event: string, body: unknown): void {
+    if (!this.win || this.win.isDestroyed()) return
+    this.win.webContents.send('debug:event', { event, body })
+  }
+
+  private async startManagedJsDebugServer(): Promise<DapAdapter> {
+    const serverPath = resolveJsDebugServerPath()
+    const port = await getFreePort()
+    const child = cp.spawn(process.execPath, [serverPath, String(port)], {
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+      stdio: ['ignore', 'pipe', 'pipe']
+    }) as unknown as cp.ChildProcessWithoutNullStreams
+
+    this.managedAdapterProcess = child
+    child.stdout.on('data', d => this.forwardEvent('output', {
+      category: 'stdout',
+      output: d.toString('utf8')
+    }))
+    child.stderr.on('data', d => this.forwardEvent('output', {
+      category: 'stderr',
+      output: d.toString('utf8')
+    }))
+    child.on('error', err => this.forwardEvent('output', {
+      category: 'stderr',
+      output: `[js-debug] failed to start DAP server: ${err.message}\n`
+    }))
+    child.on('exit', (code, signal) => {
+      if (this.managedAdapterProcess !== child) return
+      this.forwardEvent('output', {
+        category: 'stderr',
+        output: `[js-debug] DAP server exited (${code ?? signal ?? 'unknown'})\n`
+      })
+      this.managedAdapterProcess = null
+    })
+
+    return { kind: 'tcp', host: '127.0.0.1', port }
+  }
+
+  private stopManagedAdapterProcess(): void {
+    const child = this.managedAdapterProcess
+    this.managedAdapterProcess = null
+    if (!child) return
+    child.removeAllListeners()
+    if (!child.killed) child.kill()
+  }
+}
+
+function toDapLaunchConfig(config: LaunchConfig): Record<string, unknown> {
+  const {
+    adapterCommand,
+    adapterArgs,
+    adapterEnv,
+    adapterCwd,
+    adapterHost,
+    debugServer,
+    ...dapConfig
+  } = config
+  return dapConfig
+}
+
+function normalizeBreakpoints(body: unknown, requestedLines: number[]): VerifiedBreakpoint[] {
+  const raw = body as { breakpoints?: VerifiedBreakpoint[] } | undefined
+  if (Array.isArray(raw?.breakpoints)) {
+    return raw.breakpoints.map((bp, i) => ({
+      verified: bp.verified,
+      line: typeof bp.line === 'number' ? bp.line : requestedLines[i],
+      message: bp.message
+    }))
+  }
+  return requestedLines.map(line => ({ verified: true, line }))
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  return Object.values(value).every(v => typeof v === 'string')
+}
+
+function resolveJsDebugServerPath(): string {
+  const envPath = process.env.MINI_VSCODE_JS_DEBUG_DAP
+  if (envPath) {
+    if (!fs.existsSync(envPath)) {
+      throw new Error(`MINI_VSCODE_JS_DEBUG_DAP points to a missing file: ${envPath}`)
+    }
+    return envPath
+  }
+
+  const candidates = [
+    path.join(process.cwd(), 'vendor', 'js-debug-dap', 'js-debug', 'src', 'dapDebugServer.js')
+  ]
+  const resourcesPath = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath
+  if (resourcesPath) {
+    candidates.push(path.join(resourcesPath, 'js-debug-dap', 'js-debug', 'src', 'dapDebugServer.js'))
+  }
+
+  const found = candidates.find(candidate => fs.existsSync(candidate))
+  if (found) return found
+
+  throw new Error(
+    'js-debug DAP server is not installed. Run `pnpm debug:install-js-debug` ' +
+    'or set MINI_VSCODE_JS_DEBUG_DAP to js-debug/src/dapDebugServer.js.'
+  )
+}
+
+function getFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer()
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address()
+      const port = typeof address === 'object' && address ? address.port : 0
+      server.close(() => resolve(port))
+    })
+  })
 }

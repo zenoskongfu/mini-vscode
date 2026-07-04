@@ -3,6 +3,7 @@ out
 dist
 *.local
 extensions
+vendor/js-debug-dap/
 
 # macOS
 .DS_Store

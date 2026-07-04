@@ -24,6 +24,17 @@
   border-radius: 50%;
   background: #e51400; /* VSCode 断点红 */
 }
+.debug-bp-glyph-unverified::before {
+  content: '';
+  display: block;
+  width: 10px;
+  height: 10px;
+  margin: 4px 0 0 4px;
+  border-radius: 50%;
+  border: 1px solid #e51400;
+  box-sizing: border-box;
+  background: transparent;
+}
 .debug-stop-line {
   background: rgba(255, 213, 0, 0.16);
 }

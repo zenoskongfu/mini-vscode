@@ -67,10 +67,13 @@ export function MonacoEditor({
     const col = debugDecorations.current
     if (!col) return
     const decos: editor.IModelDeltaDecoration[] = debugService
-      .getBreakpointLines(path)
-      .map(line => ({
-        range: new monaco.Range(line, 1, line, 1),
-        options: { glyphMarginClassName: 'debug-bp-glyph', stickiness: 1 }
+      .getBreakpoints(path)
+      .map(bp => ({
+        range: new monaco.Range(bp.line, 1, bp.line, 1),
+        options: {
+          glyphMarginClassName: bp.verified === false ? 'debug-bp-glyph-unverified' : 'debug-bp-glyph',
+          stickiness: 1
+        }
       }))
     const loc = debugService.stopLocation
     if (loc && loc.path === path) {

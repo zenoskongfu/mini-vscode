@@ -82,11 +82,18 @@ function handle(req: DapRequest): void {
       const source = (args.source as { path?: string }) ?? {}
       const bps = (args.breakpoints as { line: number }[]) ?? []
       const lines = bps.map(b => b.line)
-      if (!state.programPath || source.path === state.programPath) {
+      const acceptsSource = !state.programPath || source.path === state.programPath
+      if (acceptsSource) {
         if (source.path) state.programPath = source.path
         state.breakpoints = [...lines].sort((a, b) => a - b)
       }
-      response(req, { breakpoints: lines.map(line => ({ verified: true, line })) })
+      response(req, {
+        breakpoints: lines.map(line => ({
+          verified: acceptsSource,
+          line,
+          message: acceptsSource ? undefined : 'mock adapter only stores breakpoints for the active program'
+        }))
+      })
       break
     }
     case 'launch':

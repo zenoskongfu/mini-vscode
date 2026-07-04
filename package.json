@@ -9,6 +9,7 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "package": "electron-builder",
+    "debug:install-js-debug": "node scripts/install-js-debug-dap.mjs",
     "rebuild:native": "electron-rebuild -f -w @homebridge/node-pty-prebuilt-multiarch",
     "postinstall": "npm run rebuild:native",
     "tsc": "tsc --noEmit"

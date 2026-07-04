@@ -53,11 +53,23 @@ export interface ElectronAPI {
   }
   debug: {
     start: (
-      config: { type?: string; request?: string; program?: string; name?: string },
+      config: {
+        type?: string
+        request?: string
+        program?: string
+        name?: string
+        debugServer?: number
+        adapterHost?: string
+        adapterCommand?: string
+        adapterArgs?: string[]
+        adapterEnv?: Record<string, string>
+        adapterCwd?: string
+        [key: string]: unknown
+      },
       breakpoints: { path: string; lines: number[] }[]
-    ) => Promise<void>
+    ) => Promise<unknown>
     request: (command: string, args?: unknown) => Promise<unknown>
-    setBreakpoints: (path: string, lines: number[]) => Promise<void>
+    setBreakpoints: (path: string, lines: number[]) => Promise<unknown>
     stop: () => Promise<void>
     onEvent: (cb: (e: { event: string; body: unknown }) => void) => () => void
   }

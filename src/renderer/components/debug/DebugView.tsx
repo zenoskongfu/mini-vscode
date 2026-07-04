@@ -1,6 +1,6 @@
 import React, { useEffect, useReducer, useState } from 'react'
 import { useService } from '../../platform/ServicesContext'
-import { IDebugService, type Scope, type Variable } from '../../services/debug/debugService'
+import { IDebugService, type DebugConsoleEntry, type Scope, type Variable } from '../../services/debug/debugService'
 import './DebugView.css'
 
 /**
@@ -64,6 +64,14 @@ export function DebugView(): React.JSX.Element {
           <Empty text="Not paused" />
         )}
       </Section>
+
+      <Section title="WATCH">
+        <WatchPanel service={debug} />
+      </Section>
+
+      <Section title="DEBUG CONSOLE">
+        <ConsolePanel service={debug} entries={debug.consoleEntries} />
+      </Section>
     </div>
   )
 }
@@ -79,6 +87,82 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Empty({ text }: { text: string }): React.JSX.Element {
   return <div className="debug-empty">{text}</div>
+}
+
+function WatchPanel({ service }: { service: IDebugService }): React.JSX.Element {
+  const [input, setInput] = useState('')
+  const [items, setItems] = useState<Array<{ expression: string; value: string }>>([])
+
+  const add = (e: React.FormEvent): void => {
+    e.preventDefault()
+    const expression = input.trim()
+    if (!expression) return
+    setInput('')
+    service.evaluate(expression, 'watch')
+      .then(v => setItems(current => [...current, { expression, value: v.value }]))
+      .catch(err => setItems(current => [...current, { expression, value: err instanceof Error ? err.message : String(err) }]))
+  }
+
+  return (
+    <div className="debug-watch">
+      {items.length === 0 ? <Empty text="No watch expressions" /> : null}
+      {items.map((item, i) => (
+        <div className="debug-watch__item" key={item.expression + i}>
+          <span className="debug-watch__expr">{item.expression}</span>
+          <span className="debug-watch__value">{item.value}</span>
+        </div>
+      ))}
+      <form className="debug-inline-form" onSubmit={add}>
+        <input
+          className="debug-input"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          placeholder="Expression"
+        />
+      </form>
+    </div>
+  )
+}
+
+function ConsolePanel({
+  service,
+  entries
+}: {
+  service: IDebugService
+  entries: readonly DebugConsoleEntry[]
+}): React.JSX.Element {
+  const [input, setInput] = useState('')
+
+  const submit = (e: React.FormEvent): void => {
+    e.preventDefault()
+    const expression = input.trim()
+    if (!expression) return
+    setInput('')
+    void service.evaluate(expression, 'repl')
+  }
+
+  return (
+    <div className="debug-console">
+      <div className="debug-console__entries">
+        {entries.length === 0 ? <Empty text="No output" /> : entries.map(entry => (
+          <div className={`debug-console__entry debug-console__entry--${entry.kind}`} key={entry.id}>
+            {entry.text}
+          </div>
+        ))}
+      </div>
+      <form className="debug-inline-form" onSubmit={submit}>
+        <input
+          className="debug-input"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          placeholder="Evaluate"
+        />
+        <button className="debug-btn" title="Clear Console" type="button" onClick={() => service.clearConsole()}>
+          Clear
+        </button>
+      </form>
+    </div>
+  )
 }
 
 function ScopesPanel({ frameId, service }: { frameId: number; service: IDebugService }): React.JSX.Element {
