@@ -12,6 +12,7 @@ export interface ElectronAPI {
   fs: {
     readDir: (path: string) => Promise<unknown>
     readFile: (path: string) => Promise<string>
+    exists: (path: string) => Promise<boolean>
     writeFile: (path: string, content: string) => Promise<void>
     createFile: (path: string) => Promise<void>
     createDir: (path: string) => Promise<void>

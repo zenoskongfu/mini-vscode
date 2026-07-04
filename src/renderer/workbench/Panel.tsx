@@ -9,17 +9,18 @@ import {
 } from "../services/diagnostics/diagnosticsService";
 import { IEditorService } from "../services/editor/editorService";
 import { TerminalView } from "../components/terminal/TerminalView";
+import { DebugConsolePanel } from "../components/debug/DebugConsolePanel";
 import "./Panel.css";
 
 interface PanelProps {
 	className?: string;
 }
 
-type PanelTab = "terminal" | "problems" | "output";
+type PanelTab = "terminal" | "problems" | "output" | "debugConsole";
 
 /**
  * 底部面板容器。
- * 承载 Terminal（真实 pty + xterm）、Problems、Output 标签。
+ * 承载 Terminal（真实 pty + xterm）、Problems、Output、Debug Console 标签。
  */
 export function Panel({ className = "" }: PanelProps): React.JSX.Element {
 	const [activeTab, setActiveTab] = useState<PanelTab>("terminal");
@@ -32,6 +33,7 @@ export function Panel({ className = "" }: PanelProps): React.JSX.Element {
 		{ id: "terminal", label: "TERMINAL" },
 		{ id: "problems", label: "PROBLEMS", badge: counts.total },
 		{ id: "output", label: "OUTPUT" },
+		{ id: "debugConsole", label: "DEBUG CONSOLE" },
 	];
 
 	return (
@@ -64,6 +66,7 @@ export function Panel({ className = "" }: PanelProps): React.JSX.Element {
 						<span className='panel-placeholder__text'>Output channel — available in Phase 9</span>
 					</div>
 				)}
+				{activeTab === "debugConsole" && <DebugConsolePanel />}
 			</div>
 		</div>
 	);

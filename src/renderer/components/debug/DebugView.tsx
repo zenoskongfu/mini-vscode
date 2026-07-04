@@ -1,6 +1,6 @@
 import React, { useEffect, useReducer, useState } from 'react'
 import { useService } from '../../platform/ServicesContext'
-import { IDebugService, type DebugConsoleEntry, type Scope, type Variable } from '../../services/debug/debugService'
+import { IDebugService, type Scope, type Variable } from '../../services/debug/debugService'
 import './DebugView.css'
 
 /**
@@ -35,6 +35,12 @@ export function DebugView(): React.JSX.Element {
             <button className="debug-btn debug-btn--stop" title="Stop (Shift+F5)" onClick={() => debug.stop()}>■</button>
           </>
         )}
+        <span className="debug-toolbar__spacer" />
+        {debug.activeSessionLabel ? (
+          <span className="debug-session" title={debug.activeSessionLabel}>
+            {debug.activeSessionLabel}
+          </span>
+        ) : null}
         <span className="debug-status">{status}</span>
       </div>
 
@@ -67,10 +73,6 @@ export function DebugView(): React.JSX.Element {
 
       <Section title="WATCH">
         <WatchPanel service={debug} />
-      </Section>
-
-      <Section title="DEBUG CONSOLE">
-        <ConsolePanel service={debug} entries={debug.consoleEntries} />
       </Section>
     </div>
   )
@@ -119,47 +121,6 @@ function WatchPanel({ service }: { service: IDebugService }): React.JSX.Element 
           onChange={e => setInput(e.target.value)}
           placeholder="Expression"
         />
-      </form>
-    </div>
-  )
-}
-
-function ConsolePanel({
-  service,
-  entries
-}: {
-  service: IDebugService
-  entries: readonly DebugConsoleEntry[]
-}): React.JSX.Element {
-  const [input, setInput] = useState('')
-
-  const submit = (e: React.FormEvent): void => {
-    e.preventDefault()
-    const expression = input.trim()
-    if (!expression) return
-    setInput('')
-    void service.evaluate(expression, 'repl')
-  }
-
-  return (
-    <div className="debug-console">
-      <div className="debug-console__entries">
-        {entries.length === 0 ? <Empty text="No output" /> : entries.map(entry => (
-          <div className={`debug-console__entry debug-console__entry--${entry.kind}`} key={entry.id}>
-            {entry.text}
-          </div>
-        ))}
-      </div>
-      <form className="debug-inline-form" onSubmit={submit}>
-        <input
-          className="debug-input"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          placeholder="Evaluate"
-        />
-        <button className="debug-btn" title="Clear Console" type="button" onClick={() => service.clearConsole()}>
-          Clear
-        </button>
       </form>
     </div>
   )

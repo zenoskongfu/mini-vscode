@@ -38,8 +38,19 @@
 .debug-btn--stop {
   color: #e51400;
 }
-.debug-status {
+.debug-toolbar__spacer {
   margin-left: auto;
+}
+.debug-session {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-fg-muted);
+  font-family: var(--font-family-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.debug-status {
+  flex-shrink: 0;
   color: var(--color-fg-muted);
   font-family: var(--font-family-mono);
 }
@@ -125,30 +136,6 @@
   overflow: hidden;
   color: var(--color-fg-default);
   text-overflow: ellipsis;
-}
-
-.debug-console__entries {
-  max-height: 160px;
-  overflow: auto;
-  padding: 2px 0;
-  font-family: var(--font-family-mono);
-}
-.debug-console__entry {
-  padding: 1px 10px;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-.debug-console__entry--input {
-  color: #9cdcfe;
-}
-.debug-console__entry--result {
-  color: var(--color-fg-default);
-}
-.debug-console__entry--output {
-  color: var(--color-fg-muted);
-}
-.debug-console__entry--error {
-  color: #f48771;
 }
 
 .debug-inline-form {

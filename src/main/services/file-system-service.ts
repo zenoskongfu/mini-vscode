@@ -47,6 +47,15 @@ export class FileSystemService {
     return content
   }
 
+  async exists(filePath: string): Promise<boolean> {
+    try {
+      await fs.access(filePath)
+      return true
+    } catch {
+      return false
+    }
+  }
+
   // ── 写入操作 ─────────────────────────────────────────
 
   async writeFile(filePath: string, content: string): Promise<void> {

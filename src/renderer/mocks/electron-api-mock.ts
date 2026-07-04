@@ -110,6 +110,7 @@ export function injectElectronAPIMock(): void {
       readDir: (path: string) => Promise.resolve(FAKE_DIRS[path] ?? []),
       readFile: (path: string) =>
         Promise.resolve(FAKE_FILES[path] ?? `// ${path}\n// （预览 mock 内容）\n`),
+      exists: (path: string) => Promise.resolve(path in FAKE_FILES || path in FAKE_DIRS),
       writeFile: noop,
       createFile: noop,
       createDir: noop,

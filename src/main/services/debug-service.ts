@@ -3,7 +3,7 @@ import fs from 'fs'
 import net from 'net'
 import path from 'path'
 import type { BrowserWindow } from 'electron'
-import { DebugSession, type DapAdapter } from '../debug/dap-session'
+import { DebugSession, type DapAdapter, type DapIncomingRequest, type DapRequestResult } from '../debug/dap-session'
 
 interface BreakpointSet {
   path: string
@@ -49,23 +49,30 @@ interface DebugStartResult {
  */
 export class DebugService {
   private session: DebugSession | null = null
+  private rootSession: DebugSession | null = null
+  private readonly sessions = new Set<DebugSession>()
   private win: BrowserWindow | null = null
-  private unsubscribeEvents: (() => void) | null = null
+  private readonly sessionDisposables: Array<() => void> = []
   private managedAdapterProcess: cp.ChildProcessWithoutNullStreams | null = null
+  private activeAdapter: DapAdapter | null = null
+  private currentBreakpoints: BreakpointSet[] = []
 
   async start(win: BrowserWindow, config: LaunchConfig, breakpoints: BreakpointSet[]): Promise<DebugStartResult> {
     this.win = win
     await this.stop()
+    this.currentBreakpoints = breakpoints.map(bp => ({ path: bp.path, lines: [...bp.lines] }))
 
-    const session = new DebugSession(await this.resolveAdapter(config))
-    this.session = session
-    this.unsubscribeEvents = session.onEvent((event, body) => this.forwardEvent(event, body))
+    const adapter = await this.resolveAdapter(config)
+    this.activeAdapter = adapter
+    const session = new DebugSession(adapter)
+    this.rootSession = session
+    this.registerSession(session, true)
     try {
       await session.start()
 
       const initialized = session.waitEvent('initialized', 15000)
       await session.request('initialize', {
-        adapterID: config.type ?? 'mock',
+        adapterID: dapAdapterID(config),
         linesStartAt1: true,
         columnsStartAt1: true,
         pathFormat: 'path'
@@ -112,19 +119,73 @@ export class DebugService {
   }
 
   async stop(): Promise<void> {
-    const session = this.session
     this.session = null
-    this.unsubscribeEvents?.()
-    this.unsubscribeEvents = null
-    if (session) await session.disconnectAndStop()
+    this.rootSession = null
+    this.activeAdapter = null
+    this.currentBreakpoints = []
+    const sessions = [...this.sessions].reverse()
+    this.sessions.clear()
+    for (const dispose of this.sessionDisposables.splice(0)) dispose()
+    for (const session of sessions) await session.disconnectAndStop()
     this.stopManagedAdapterProcess()
+  }
+
+  private registerSession(session: DebugSession, active: boolean): void {
+    this.sessions.add(session)
+    if (active) this.session = session
+    this.sessionDisposables.push(
+      session.onEvent((event, body) => this.forwardEvent(event, body)),
+      session.onRequest(request => this.handleAdapterRequest(request))
+    )
+  }
+
+  private async handleAdapterRequest(request: DapIncomingRequest): Promise<DapRequestResult | undefined> {
+    if (request.command !== 'startDebugging') return undefined
+    await this.startChildDebugSession(request.arguments)
+    return { body: {} }
+  }
+
+  private async startChildDebugSession(args: unknown): Promise<void> {
+    if (!this.activeAdapter || this.activeAdapter.kind !== 'tcp') {
+      throw new Error('startDebugging is only supported for TCP debug adapters')
+    }
+
+    const startArgs = args as { request?: 'launch' | 'attach'; configuration?: LaunchConfig } | undefined
+    const childConfig: LaunchConfig = {
+      ...(startArgs?.configuration ?? {}),
+      request: startArgs?.request ?? startArgs?.configuration?.request ?? 'launch'
+    }
+
+    const child = new DebugSession(this.activeAdapter)
+    this.registerSession(child, true)
+    await child.start()
+
+    const initialized = child.waitEvent('initialized', 15000)
+    await child.request('initialize', {
+      adapterID: dapAdapterID(childConfig),
+      linesStartAt1: true,
+      columnsStartAt1: true,
+      pathFormat: 'path'
+    }, 15000)
+
+    const startCommand = childConfig.request === 'attach' ? 'attach' : 'launch'
+    const started = child.request(startCommand, toDapLaunchConfig(childConfig), 30000)
+    await initialized
+    for (const bp of this.currentBreakpoints) {
+      await child.request('setBreakpoints', {
+        source: { path: bp.path, name: path.basename(bp.path) },
+        breakpoints: bp.lines.map((line) => ({ line })),
+      })
+    }
+    await child.request('configurationDone', {}, 15000)
+    await started
   }
 
   private async resolveAdapter(config: LaunchConfig): Promise<DapAdapter> {
     if (typeof config.debugServer === 'number') {
       return {
         kind: 'tcp',
-        host: typeof config.adapterHost === 'string' ? config.adapterHost : '127.0.0.1',
+        host: typeof config.adapterHost === 'string' ? config.adapterHost : 'localhost',
         port: config.debugServer
       }
     }
@@ -193,7 +254,7 @@ export class DebugService {
       this.managedAdapterProcess = null
     })
 
-    return { kind: 'tcp', host: '127.0.0.1', port }
+    return { kind: 'tcp', host: 'localhost', port }
   }
 
   private stopManagedAdapterProcess(): void {
@@ -215,7 +276,14 @@ function toDapLaunchConfig(config: LaunchConfig): Record<string, unknown> {
     debugServer,
     ...dapConfig
   } = config
+  if (dapConfig.type === 'node') {
+    return { ...dapConfig, type: 'pwa-node' }
+  }
   return dapConfig
+}
+
+function dapAdapterID(config: LaunchConfig): string {
+  return config.type === 'node' ? 'pwa-node' : config.type ?? 'mock'
 }
 
 function normalizeBreakpoints(body: unknown, requestedLines: number[]): VerifiedBreakpoint[] {
@@ -261,11 +329,19 @@ function resolveJsDebugServerPath(): string {
   )
 }
 
-function getFreePort(): Promise<number> {
+async function getFreePort(): Promise<number> {
+  try {
+    return await getFreePortOn('::1')
+  } catch {
+    return getFreePortOn('127.0.0.1')
+  }
+}
+
+function getFreePortOn(host: string): Promise<number> {
   return new Promise((resolve, reject) => {
     const server = net.createServer()
     server.once('error', reject)
-    server.listen(0, '127.0.0.1', () => {
+    server.listen(0, host, () => {
       const address = server.address()
       const port = typeof address === 'object' && address ? address.port : 0
       server.close(() => resolve(port))

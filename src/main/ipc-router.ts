@@ -10,6 +10,7 @@ import { ExtensionManagementService } from './extensions/extensionManagementServ
 export const IPC_CHANNELS = {
   FS_READ_DIR: 'fs:readDir',
   FS_READ_FILE: 'fs:readFile',
+  FS_EXISTS: 'fs:exists',
   FS_WRITE_FILE: 'fs:writeFile',
   FS_CREATE_FILE: 'fs:createFile',
   FS_CREATE_DIR: 'fs:createDir',
@@ -182,6 +183,9 @@ export class IPCRouter {
     )
     ipcMain.handle(IPC_CHANNELS.FS_READ_FILE, (_e, filePath: string) =>
       this.fsService.readFile(filePath)
+    )
+    ipcMain.handle(IPC_CHANNELS.FS_EXISTS, (_e, filePath: string) =>
+      this.fsService.exists(filePath)
     )
     ipcMain.handle(IPC_CHANNELS.FS_WRITE_FILE, (_e, filePath: string, content: string) =>
       this.fsService.writeFile(filePath, content)

@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   fs: {
     readDir: (path: string) => ipcRenderer.invoke('fs:readDir', path),
     readFile: (path: string) => ipcRenderer.invoke('fs:readFile', path),
+    exists: (path: string) => ipcRenderer.invoke('fs:exists', path),
     writeFile: (path: string, content: string) =>
       ipcRenderer.invoke('fs:writeFile', path, content),
     createFile: (path: string) => ipcRenderer.invoke('fs:createFile', path),

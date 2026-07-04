@@ -45,7 +45,24 @@ interface DapEvent {
   body?: unknown
 }
 
-type DapMessage = DapResponse | DapEvent | { type?: string }
+interface DapRequest {
+  type: 'request'
+  seq?: number
+  command?: string
+  arguments?: unknown
+}
+
+export interface DapIncomingRequest {
+  seq: number
+  command: string
+  arguments?: unknown
+}
+
+export interface DapRequestResult {
+  body?: unknown
+}
+
+type DapMessage = DapResponse | DapEvent | DapRequest | { type?: string }
 
 export class DebugAdapterError extends Error {
   constructor(message: string) {
@@ -65,6 +82,7 @@ export class DebugSession {
   private readonly pending = new Map<number, PendingRequest>()
   private readonly eventWaiters: EventWaiter[] = []
   private readonly eventListeners = new Set<(event: string, body: unknown) => void>()
+  private readonly requestListeners = new Set<(request: DapIncomingRequest) => Promise<DapRequestResult | undefined> | DapRequestResult | undefined>()
   private readonly seenEvents = new Set<string>()
   private seq = 1
   private buf = Buffer.alloc(0)
@@ -84,6 +102,13 @@ export class DebugSession {
   onEvent(listener: (event: string, body: unknown) => void): () => void {
     this.eventListeners.add(listener)
     return () => this.eventListeners.delete(listener)
+  }
+
+  onRequest(
+    listener: (request: DapIncomingRequest) => Promise<DapRequestResult | undefined> | DapRequestResult | undefined
+  ): () => void {
+    this.requestListeners.add(listener)
+    return () => this.requestListeners.delete(listener)
   }
 
   waitEvent(name: string, ms = 10000): Promise<void> {
@@ -177,24 +202,31 @@ export class DebugSession {
 
   private async startTcp(): Promise<void> {
     const { host, port } = this.adapter as DapTcpAdapter
+    const hosts = localConnectionHosts(host)
     const start = Date.now()
     let lastError: unknown
+    let lastHost = host
     while (!this.disposed && Date.now() - start < 8000) {
-      try {
-        const socket = await connectTcpSocket(host, port)
-        this.socket = socket
-        this.writable = socket
-        socket.on('data', (d) => this.onData(d))
-        socket.on('error', (err) => this.dispose(asAdapterError(err)))
-        socket.on('close', () => this.dispose(new DebugAdapterError('debug adapter connection closed')))
-        return
-      } catch (err) {
-        lastError = err
-        await delay(100)
+      for (const candidateHost of hosts) {
+        try {
+          const socket = await connectTcpSocket(candidateHost, port)
+          this.socket = socket
+          this.writable = socket
+          socket.on('data', (d) => this.onData(d))
+          socket.on('error', (err) => this.dispose(asAdapterError(err)))
+          socket.on('close', () => this.dispose(new DebugAdapterError('debug adapter connection closed')))
+          return
+        } catch (err) {
+          lastError = err
+          lastHost = candidateHost
+        }
       }
+      await delay(100)
     }
     const message = lastError instanceof Error ? lastError.message : String(lastError)
-    throw new DebugAdapterError(`debug adapter connection failed on ${host}:${port}: ${message}`)
+    throw new DebugAdapterError(
+      `debug adapter connection failed on ${hosts.join(' or ')}:${port} (last ${lastHost}): ${message}`
+    )
   }
 
   private send(msg: Record<string, unknown>): void {
@@ -231,6 +263,8 @@ export class DebugSession {
     } else if (msg.type === 'event') {
       const event = (msg as DapEvent).event
       if (event) this.emitEvent(event, (msg as DapEvent).body)
+    } else if (msg.type === 'request') {
+      void this.handleAdapterRequest(msg as DapRequest)
     }
   }
 
@@ -258,6 +292,41 @@ export class DebugSession {
       waiter.resolve()
     }
     this.eventListeners.forEach(listener => listener(event, body))
+  }
+
+  private async handleAdapterRequest(msg: DapRequest): Promise<void> {
+    if (msg.seq === undefined || !msg.command) return
+
+    const request: DapIncomingRequest = {
+      seq: msg.seq,
+      command: msg.command,
+      arguments: msg.arguments
+    }
+
+    try {
+      for (const listener of this.requestListeners) {
+        const result = await listener(request)
+        if (result !== undefined) {
+          this.sendResponse(request, true, result.body)
+          return
+        }
+      }
+      this.sendResponse(request, false, undefined, `Unsupported adapter request: ${request.command}`)
+    } catch (err) {
+      this.sendResponse(request, false, undefined, err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  private sendResponse(request: DapIncomingRequest, success: boolean, body?: unknown, message?: string): void {
+    this.send({
+      seq: this.seq++,
+      type: 'response',
+      request_seq: request.seq,
+      command: request.command,
+      success,
+      body,
+      message
+    })
   }
 
   private removeWaiter(waiter: EventWaiter): void {
@@ -298,6 +367,13 @@ function connectTcpSocket(host: string, port: number): Promise<net.Socket> {
       resolve(socket)
     })
   })
+}
+
+function localConnectionHosts(host: string): string[] {
+  if (host === 'localhost') return ['localhost', '::1', '127.0.0.1']
+  if (host === '127.0.0.1') return ['127.0.0.1', '::1']
+  if (host === '::1') return ['::1', '127.0.0.1']
+  return [host]
 }
 
 function delay(ms: number): Promise<void> {

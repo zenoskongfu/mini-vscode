@@ -60,6 +60,7 @@ export interface IDebugService {
   readonly activeFrameId: number | null
   /** 当前停靠位置（供编辑器高亮当前行） */
   readonly stopLocation: { path: string; line: number } | null
+  readonly activeSessionLabel: string | null
   readonly consoleEntries: readonly DebugConsoleEntry[]
 
   getBreakpointLines(path: string): number[]
@@ -102,6 +103,7 @@ export class DebugService implements IDebugService {
   private _callStack: StackFrame[] = []
   private _activeFrameId: number | null = null
   private _stopLocation: { path: string; line: number } | null = null
+  private _activeSessionLabel: string | null = null
   private _consoleEntries: DebugConsoleEntry[] = []
   private _threadId = 1
   private _subscribed = false
@@ -124,6 +126,9 @@ export class DebugService implements IDebugService {
   }
   get stopLocation(): { path: string; line: number } | null {
     return this._stopLocation
+  }
+  get activeSessionLabel(): string | null {
+    return this._activeSessionLabel
   }
   get consoleEntries(): readonly DebugConsoleEntry[] {
     return this._consoleEntries
@@ -169,8 +174,11 @@ export class DebugService implements IDebugService {
     }
 
     const breakpoints = [...this._breakpoints].map(([path, set]) => ({ path, lines: [...set] }))
+    const sessionLabel = sessionLabelFor(launchConfig)
+    this._activeSessionLabel = sessionLabel
     this._status = 'running'
     this._stopLocation = null
+    this._addConsoleEntry('output', `Starting ${sessionLabel}`)
     this._onDidChangeState.fire()
 
     try {
@@ -280,6 +288,8 @@ export class DebugService implements IDebugService {
     } else if (event === 'output') {
       const b = body as { output?: string; category?: string }
       this._addConsoleEntry(b.category === 'stderr' ? 'error' : 'output', b.output ?? '')
+    } else if (event === 'breakpoint') {
+      this._applyBreakpointEvent(body)
     } else if (event === 'terminated' || event === 'exited') {
       this._setInactive()
     }
@@ -290,6 +300,7 @@ export class DebugService implements IDebugService {
     this._callStack = []
     this._activeFrameId = null
     this._stopLocation = null
+    this._activeSessionLabel = null
     this._onDidChangeState.fire()
   }
 
@@ -323,6 +334,26 @@ export class DebugService implements IDebugService {
     this._onDidChangeBreakpoints.fire()
   }
 
+  private _applyBreakpointEvent(body: unknown): void {
+    const eventBody = body as { breakpoint?: DebugBreakpoint & { source?: { path?: string } } } | undefined
+    const breakpoint = eventBody?.breakpoint
+    const path = breakpoint?.source?.path
+    const line = breakpoint?.line
+    if (!path || typeof line !== 'number') return
+
+    let details = this._breakpointDetails.get(path)
+    if (!details) {
+      details = new Map()
+      this._breakpointDetails.set(path, details)
+    }
+    details.set(line, {
+      line,
+      verified: breakpoint.verified,
+      message: breakpoint.message
+    })
+    this._onDidChangeBreakpoints.fire()
+  }
+
   private _syncBreakpointDetails(path: string, lines: Set<number>): void {
     const details = this._breakpointDetails.get(path)
     if (!details) return
@@ -346,12 +377,25 @@ export class DebugService implements IDebugService {
       this.notificationService.notify('warning', '先打开一个文件作为调试目标（程序入口）。')
       return null
     }
+
+    if (isNodeDebuggableFile(program)) {
+      const cwd = root ?? dirname(program)
+      return {
+        type: 'node',
+        request: 'launch',
+        name: 'Debug Current File',
+        program,
+        cwd
+      }
+    }
+
     return { type: 'mock', request: 'launch', program, name: 'Mock Debug' }
   }
 
   private async _readFirstLaunchConfig(root: string): Promise<DebugLaunchConfig | null> {
     const launchPath = `${root.replace(/\/$/, '')}/.vscode/launch.json`
     try {
+      if (!(await window.electronAPI.fs.exists(launchPath))) return null
       const raw = await window.electronAPI.fs.readFile(launchPath)
       const parsed = JSON.parse(stripJsonComments(raw)) as { configurations?: DebugLaunchConfig[] }
       const configs = Array.isArray(parsed.configurations) ? parsed.configurations : []
@@ -401,6 +445,32 @@ function replaceConfigVars(value: unknown, vars: Record<string, string>): unknow
     )
   }
   return value
+}
+
+function isNodeDebuggableFile(path: string): boolean {
+  return /\.(?:cjs|cts|js|jsx|mjs|mts|ts|tsx)$/i.test(path)
+}
+
+function dirname(path: string): string {
+  const trimmed = path.replace(/\/+$/, '')
+  const index = trimmed.lastIndexOf('/')
+  if (index > 0) return trimmed.slice(0, index)
+  if (index === 0) return '/'
+  return ''
+}
+
+function sessionLabelFor(config: DebugLaunchConfig): string {
+  const type =
+    typeof config.type === 'string'
+      ? config.type
+      : config.debugServer
+        ? 'server'
+        : config.adapterCommand
+          ? 'custom'
+          : 'mock'
+  const name = typeof config.name === 'string' && config.name ? config.name : 'Debug'
+  const label = `${type}: ${name}`
+  return type === 'mock' ? `${label} (protocol teaching adapter; simulated values)` : label
 }
 
 function errorMessage(err: unknown): string {
