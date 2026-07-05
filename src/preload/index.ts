@@ -98,7 +98,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     set: (partial: unknown) => ipcRenderer.invoke('state:set', partial)
   },
 
-  // 调试 — Phase 14（DAP 客户端在主进程，事件单向推）
+  // 调试 — Phase 14
+  // renderer 是沙箱环境，不能直接 spawn js-debug / 连接 socket。
+  // 所以命令类操作走 invoke 到 main；adapter 主动推来的 DAP event 再由 main 单向 send 回来。
   debug: {
     start: (config: unknown, breakpoints: unknown) =>
       ipcRenderer.invoke('debug:start', config, breakpoints),

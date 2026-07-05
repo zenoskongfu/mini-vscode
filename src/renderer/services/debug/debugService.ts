@@ -8,6 +8,10 @@ import { IWorkspaceService } from '../workspace/workspaceService'
 export type DebugStatus = 'inactive' | 'running' | 'stopped'
 
 export interface DebugLaunchConfig {
+  /**
+   * renderer 侧只关心 launch.json 的常用字段。
+   * 其它 js-debug 支持的字段通过 [key: string] 透传给 main/adapter。
+   */
   name?: string
   type?: string
   request?: 'launch' | 'attach'
@@ -22,11 +26,13 @@ export interface DebugLaunchConfig {
   [key: string]: unknown
 }
 export interface DebugBreakpoint {
+  /** UI 里的一个断点。verified/message 来自 adapter 的 setBreakpoints response/event。 */
   line: number
   verified?: boolean
   message?: string
 }
 export interface StackFrame {
+  /** DAP stackFrame.id，后续 scopes/evaluate 都要带这个 id。 */
   id: number
   name: string
   line: number
@@ -34,15 +40,19 @@ export interface StackFrame {
   source?: { name?: string; path?: string }
 }
 export interface Scope {
+  /** DAP scope，例如 Local / Global / Closure。 */
   name: string
+  /** 变量树懒加载的句柄；等用户展开时再用 variables 请求取子变量。 */
   variablesReference: number
 }
 export interface Variable {
+  /** DAP variable，variablesReference > 0 表示还可以继续展开。 */
   name: string
   value: string
   variablesReference: number
 }
 export interface DebugConsoleEntry {
+  /** Debug Console 里的展示行，既包括 adapter output，也包括用户 evaluate 输入/结果。 */
   id: number
   kind: 'input' | 'result' | 'output' | 'error'
   text: string
@@ -88,6 +98,9 @@ export const IDebugService = createDecorator<IDebugService>('debugService')
  * 持断点模型 + 会话状态；DAP 客户端在主进程（DebugService main），这里经
  * window.electronAPI.debug 调请求、订阅事件。`stopped` 时拉 stackTrace，
  * 选中栈顶帧 → 暴露 stopLocation 给编辑器高亮，调用栈/变量给 Debug 视图。
+ *
+ * 注意：renderer 不能直接 import fs/net/child_process，也不应该直接启动 adapter。
+ * 它只像 VS Code 的 workbench 一样维护 UI 模型，把真正危险的事情交给 main。
  */
 export class DebugService implements IDebugService {
   declare readonly _serviceBrand: undefined
@@ -97,7 +110,9 @@ export class DebugService implements IDebugService {
   private readonly _onDidChangeState = new Emitter<void>()
   readonly onDidChangeState = this._onDidChangeState.event
 
+  /** path -> line set。断点先存在 renderer，这样 UI 不启动调试也能显示红点。 */
   private readonly _breakpoints = new Map<string, Set<number>>()
+  /** path -> line -> adapter 验证详情。和 _breakpoints 分开，方便保留 UI 断点集合。 */
   private readonly _breakpointDetails = new Map<string, Map<number, DebugBreakpoint>>()
   private _status: DebugStatus = 'inactive'
   private _callStack: StackFrame[] = []
@@ -105,7 +120,9 @@ export class DebugService implements IDebugService {
   private _stopLocation: { path: string; line: number } | null = null
   private _activeSessionLabel: string | null = null
   private _consoleEntries: DebugConsoleEntry[] = []
+  /** 当前控制命令使用的 threadId。完整 VS Code 会维护多线程模型，这里先取 stopped 事件里的线程。 */
   private _threadId = 1
+  /** 避免重复订阅 main 推来的 debug:event。 */
   private _subscribed = false
   private _consoleSeq = 0
 
@@ -147,6 +164,8 @@ export class DebugService implements IDebugService {
     }))
   }
   toggleBreakpoint(path: string, line: number): void {
+    // Monaco gutter 点击只改变 renderer 的断点模型。
+    // 如果当前正在调试，再异步把这个文件的新断点集合同步给 adapter。
     let set = this._breakpoints.get(path)
     if (!set) {
       set = new Set()
@@ -164,7 +183,10 @@ export class DebugService implements IDebugService {
 
   // ── 会话控制 ──────────────────────────────────────────
   async start(config?: DebugLaunchConfig): Promise<void> {
+    // 第一次启动调试时才订阅 main 进程事件，避免服务实例化后就占用 IPC listener。
     this._ensureSubscribed()
+    // 有显式 config 就用显式 config；否则读取 .vscode/launch.json；
+    // 如果没有 launch.json，JS/TS 文件默认走真实 node/js-debug。
     const launchConfig = config ? this._resolveVariables(config) : await this._loadLaunchConfig()
     if (!launchConfig) return
 
@@ -178,10 +200,12 @@ export class DebugService implements IDebugService {
     this._activeSessionLabel = sessionLabel
     this._status = 'running'
     this._stopLocation = null
+    // 在 Debug Console 里明确告诉用户当前跑的是 node 还是 mock，避免把 mock 当真实调试。
     this._addConsoleEntry('output', `Starting ${sessionLabel}`)
     this._onDidChangeState.fire()
 
     try {
+      // debug.start 是一次 IPC invoke：renderer -> preload -> main -> adapter。
       const result = await window.electronAPI.debug.start(launchConfig, breakpoints)
       this._applyStartResult(result)
     } catch (err) {
@@ -208,6 +232,8 @@ export class DebugService implements IDebugService {
   }
 
   private async _control(command: string): Promise<void> {
+    // continue/next/stepIn/stepOut 都要求程序当前处于 stopped。
+    // 发出控制命令后，UI 先切 running，等 adapter 再发 stopped/terminated。
     if (this._status !== 'stopped') return
     this._status = 'running'
     this._stopLocation = null
@@ -217,22 +243,28 @@ export class DebugService implements IDebugService {
 
   // ── 变量树（懒展开）────────────────────────────────────
   async setActiveFrame(frameId: number): Promise<void> {
+    // 用户点击调用栈某一帧时，变量面板后续 scopes/evaluate 要使用这个 frameId。
     this._activeFrameId = frameId
     const frame = this._callStack.find(f => f.id === frameId)
     if (frame?.source?.path) this._stopLocation = { path: frame.source.path, line: frame.line }
     this._onDidChangeState.fire()
   }
   async getScopes(frameId: number): Promise<Scope[]> {
+    // scopes 只有停住时才有意义；这里不缓存，DebugView 展开变量树时按需请求。
     const body = (await window.electronAPI.debug.request('scopes', { frameId })) as { scopes?: Scope[] }
     return body?.scopes ?? []
   }
   async getVariables(reference: number): Promise<Variable[]> {
+    // variablesReference 是 adapter 给的“远程对象句柄”。
+    // UI 不直接保存真实对象，只拿句柄再向 adapter 拉子节点。
     const body = (await window.electronAPI.debug.request('variables', {
       variablesReference: reference
     })) as { variables?: Variable[] }
     return body?.variables ?? []
   }
   async evaluate(expression: string, context: 'repl' | 'watch' = 'repl'): Promise<Variable> {
+    // Debug Console / Watch 都走 DAP evaluate。
+    // context='watch' 时通常不把输入写入 Debug Console。
     const trimmed = expression.trim()
     if (!trimmed) return { name: '', value: '', variablesReference: 0 }
     if (context === 'repl') this._addConsoleEntry('input', `> ${trimmed}`)
@@ -263,6 +295,8 @@ export class DebugService implements IDebugService {
 
   // ── 事件 ──────────────────────────────────────────────
   private _ensureSubscribed(): void {
+    // main 会通过 webContents.send('debug:event') 推送 DAP event。
+    // 这里订阅一次即可；服务生命周期跟 renderer 一样长。
     if (this._subscribed) return
     this._subscribed = true
     window.electronAPI.debug.onEvent(e => this._onEvent(e.event, e.body))
@@ -270,6 +304,8 @@ export class DebugService implements IDebugService {
 
   private async _onEvent(event: string, body: unknown): Promise<void> {
     if (event === 'stopped') {
+      // stopped 只是告诉我们“某个线程停住了”，还不包含完整调用栈。
+      // 所以收到 stopped 后，要主动再发 stackTrace 请求。
       const b = body as { threadId?: number }
       this._threadId = b.threadId ?? 1
       this._status = 'stopped'
@@ -278,17 +314,21 @@ export class DebugService implements IDebugService {
       })) as { stackFrames?: StackFrame[] }
       this._callStack = st?.stackFrames ?? []
       const top = this._callStack[0]
+      // 栈顶帧的位置就是编辑器黄色箭头要高亮的位置。
       this._activeFrameId = top?.id ?? null
       this._stopLocation = top?.source?.path ? { path: top.source.path, line: top.line } : null
       this._onDidChangeState.fire()
     } else if (event === 'continued') {
+      // 程序继续运行后，黄色箭头要隐藏；旧调用栈不再可信。
       this._status = 'running'
       this._stopLocation = null
       this._onDidChangeState.fire()
     } else if (event === 'output') {
+      // adapter/runtime 输出展示到 Debug Console。
       const b = body as { output?: string; category?: string }
       this._addConsoleEntry(b.category === 'stderr' ? 'error' : 'output', b.output ?? '')
     } else if (event === 'breakpoint') {
+      // adapter 可能异步告诉我们某个断点 verified 状态变化。
       this._applyBreakpointEvent(body)
     } else if (event === 'terminated' || event === 'exited') {
       this._setInactive()
@@ -306,6 +346,8 @@ export class DebugService implements IDebugService {
 
   private async _sendBreakpoints(path: string, lines: number[]): Promise<void> {
     try {
+      // setBreakpoints 是“按文件覆盖”的语义：
+      // 给 adapter 的是这个文件完整断点列表，而不是单个新增/删除。
       const body = await window.electronAPI.debug.setBreakpoints(path, lines)
       this._applyBreakpointResponse(path, body, lines)
     } catch (err) {
@@ -315,6 +357,7 @@ export class DebugService implements IDebugService {
   }
 
   private _applyStartResult(result: unknown): void {
+    // start 时 main 会把所有已存在断点的 verified 结果一次性返回。
     const r = result as { breakpointSets?: { path: string; breakpoints: DebugBreakpoint[] }[] } | undefined
     for (const set of r?.breakpointSets ?? []) {
       this._applyBreakpointResponse(set.path, { breakpoints: set.breakpoints }, this.getBreakpointLines(set.path))
@@ -322,6 +365,8 @@ export class DebugService implements IDebugService {
   }
 
   private _applyBreakpointResponse(path: string, body: unknown, requestedLines: number[]): void {
+    // 把 adapter 返回的 breakpoints 映射回 UI 模型。
+    // 如果 adapter 没回 line，就用原请求 line 兜底。
     const response = body as { breakpoints?: DebugBreakpoint[] } | undefined
     const details = new Map<number, DebugBreakpoint>()
     const returned = response?.breakpoints ?? requestedLines.map(line => ({ line, verified: true }))
@@ -335,6 +380,7 @@ export class DebugService implements IDebugService {
   }
 
   private _applyBreakpointEvent(body: unknown): void {
+    // DAP breakpoint event 是增量更新，常见于断点从 unverified 变 verified。
     const eventBody = body as { breakpoint?: DebugBreakpoint & { source?: { path?: string } } } | undefined
     const breakpoint = eventBody?.breakpoint
     const path = breakpoint?.source?.path
@@ -355,6 +401,7 @@ export class DebugService implements IDebugService {
   }
 
   private _syncBreakpointDetails(path: string, lines: Set<number>): void {
+    // 用户删掉断点后，旧的 verified/message 也要跟着清掉，避免 UI 显示过期状态。
     const details = this._breakpointDetails.get(path)
     if (!details) return
     for (const line of [...details.keys()]) {
@@ -366,6 +413,10 @@ export class DebugService implements IDebugService {
   }
 
   private async _loadLaunchConfig(): Promise<DebugLaunchConfig | null> {
+    // 行为对齐 VS Code 的简化版：
+    // 1. 工作区有 .vscode/launch.json：用第一个 configuration；
+    // 2. 没有 launch.json 且当前文件是 JS/TS：默认真实 node/js-debug；
+    // 3. 其它文件：退回 mock 教学 adapter。
     const root = this.workspaceService.root
     if (root) {
       const config = await this._readFirstLaunchConfig(root)
@@ -379,6 +430,7 @@ export class DebugService implements IDebugService {
     }
 
     if (isNodeDebuggableFile(program)) {
+      // 默认调试当前文件，cwd 取工作区根目录；没有工作区时取当前文件目录。
       const cwd = root ?? dirname(program)
       return {
         type: 'node',
@@ -393,6 +445,8 @@ export class DebugService implements IDebugService {
   }
 
   private async _readFirstLaunchConfig(root: string): Promise<DebugLaunchConfig | null> {
+    // 当前先不做配置选择器，读取第一个 configuration。
+    // 后续要对齐 VS Code，可以在这里接入 quick pick / compounds。
     const launchPath = `${root.replace(/\/$/, '')}/.vscode/launch.json`
     try {
       if (!(await window.electronAPI.fs.exists(launchPath))) return null
@@ -411,6 +465,7 @@ export class DebugService implements IDebugService {
   }
 
   private _resolveVariables(config: DebugLaunchConfig): DebugLaunchConfig {
+    // 只实现最常见的两个变量。真实 VS Code 的变量替换系统更完整。
     const root = this.workspaceService.root ?? ''
     const file = this.editorService.activePath ?? ''
     return replaceConfigVars(config, {
@@ -420,6 +475,7 @@ export class DebugService implements IDebugService {
   }
 
   private _addConsoleEntry(kind: DebugConsoleEntry['kind'], text: string): void {
+    // immutable 更新，保证 useEvent/useService 能感知引用变化并重新渲染。
     if (!text) return
     this._consoleEntries = [...this._consoleEntries, { id: ++this._consoleSeq, kind, text }]
     this._onDidChangeState.fire()
@@ -429,12 +485,14 @@ export class DebugService implements IDebugService {
 registerSingleton(IDebugService, DebugService)
 
 function stripJsonComments(input: string): string {
+  // launch.json 允许注释，JSON.parse 不允许；这里做一个最小版注释剥离。
   return input
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/(^|[^:])\/\/.*$/gm, '$1')
 }
 
 function replaceConfigVars(value: unknown, vars: Record<string, string>): unknown {
+  // 递归替换对象/数组/字符串里的 ${workspaceFolder} 和 ${file}。
   if (typeof value === 'string') {
     return value.replace(/\$\{(workspaceFolder|file)\}/g, (_, key: string) => vars[key] ?? '')
   }
@@ -448,10 +506,12 @@ function replaceConfigVars(value: unknown, vars: Record<string, string>): unknow
 }
 
 function isNodeDebuggableFile(path: string): boolean {
+  // 没有 launch.json 时，这些文件默认走真实 js-debug，而不是 mock adapter。
   return /\.(?:cjs|cts|js|jsx|mjs|mts|ts|tsx)$/i.test(path)
 }
 
 function dirname(path: string): string {
+  // renderer 不能 import Node path，这里用一个够用的 POSIX dirname。
   const trimmed = path.replace(/\/+$/, '')
   const index = trimmed.lastIndexOf('/')
   if (index > 0) return trimmed.slice(0, index)
@@ -460,6 +520,8 @@ function dirname(path: string): string {
 }
 
 function sessionLabelFor(config: DebugLaunchConfig): string {
+  // 给 DebugView / Debug Console 展示当前 adapter 类型。
+  // mock 特意标出来，避免学习时把模拟变量误认为真实 Node 变量。
   const type =
     typeof config.type === 'string'
       ? config.type
