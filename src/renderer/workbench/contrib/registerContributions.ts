@@ -172,11 +172,22 @@ export function registerWorkbenchContributions(insta: IInstantiationService): vo
   )
   register(
     'workbench.action.selectTheme',
-    'Toggle Color Theme (Dark / Light)',
+    'Color Theme',
     'Preferences',
-    () => {
-      const next = themeService.current.type === 'dark' ? 'Light+' : 'Dark+'
-      configurationService.updateValue('workbench.colorTheme', next)
+    async () => {
+      const selected = await quickInputService.pick(
+        themeService.getColorThemes().map(theme => ({
+          id: theme.id,
+          label: theme.label,
+          description: theme.id === themeService.current.id ? 'Current' : theme.type === 'dark' ? 'Dark' : 'Light',
+          value: theme.id
+        })),
+        {
+          title: 'Preferences: Color Theme',
+          placeholder: 'Select Color Theme'
+        }
+      )
+      if (selected) await configurationService.updateValue('workbench.colorTheme', selected.value)
     }
   )
 }
