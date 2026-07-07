@@ -5,7 +5,7 @@ import { IConfigurationService } from '../configuration/configurationService'
 import type { ColorThemeData } from '../../themes/theme-types'
 import { darkPlus } from '../../themes/dark-plus'
 import { lightPlus } from '../../themes/light-plus'
-import { monaco, monacoThemeName } from '../monaco-setup'
+import { defineMonacoTheme, monaco, monacoThemeName } from '../monaco-setup'
 
 const THEME_SETTING = 'workbench.colorTheme'
 const DEFAULT_COLOR_THEME_ID = darkPlus.id
@@ -107,6 +107,7 @@ export class ThemeService implements IThemeService {
 
   private registerColorTheme(theme: ColorThemeData): void {
     this._colorThemes.set(theme.id, theme)
+    defineMonacoTheme(theme)
   }
 
   private getFallbackTheme(): ColorThemeData {

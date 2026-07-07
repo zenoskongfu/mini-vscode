@@ -17,6 +17,7 @@ import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker"
 export { monaco };
 
 let initialized = false;
+const definedMonacoThemes = new Set<string>();
 
 /**
  * 将 Monaco 接到本地打包的 monaco-editor 实例及其 web worker。
@@ -118,8 +119,11 @@ export function monacoThemeName(themeId: string): string {
 }
 
 /** 用主题里的语法规则 + CSS 调色板，注册成 Monaco 自定义主题 */
-function defineMonacoTheme(theme: ThemeDefinition): void {
-	monaco.editor.defineTheme(monacoThemeName(theme.id), {
+export function defineMonacoTheme(theme: ThemeDefinition): void {
+	const themeName = monacoThemeName(theme.id);
+	if (definedMonacoThemes.has(themeName)) return;
+
+	monaco.editor.defineTheme(themeName, {
 		base: theme.monacoBase,
 		inherit: true,
 		rules: (theme.tokenRules ?? []).map((r) => {
@@ -130,6 +134,7 @@ function defineMonacoTheme(theme: ThemeDefinition): void {
 		}),
 		colors: buildEditorColors(theme),
 	});
+	definedMonacoThemes.add(themeName);
 }
 
 /** 把工作区调色板（CSS 变量）映射成 Monaco 的 editor.* 颜色键 */
