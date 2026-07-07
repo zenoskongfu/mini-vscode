@@ -24,3 +24,11 @@ export interface ThemeDefinition {
    */
   tokenRules?: ThemeTokenRule[]
 }
+
+export type ColorThemeSource = 'builtin' | 'extension'
+
+/** 注册表中的颜色主题数据；先兼容现有 ThemeDefinition，后续可承载插件来源信息。 */
+export interface ColorThemeData extends ThemeDefinition {
+  source?: ColorThemeSource
+  extensionId?: string
+}
