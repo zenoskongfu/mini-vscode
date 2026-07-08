@@ -14,6 +14,7 @@ interface PaletteEntry {
   description?: string
   keybinding?: string
   indices: number[]
+  pickItem?: QuickPickItem
   execute: () => void
 }
 
@@ -36,25 +37,28 @@ export function CommandPalette(): React.JSX.Element | null {
   const listRef = useRef<HTMLDivElement>(null)
 
   const mode = quickInput.mode
+  const pickItems = quickInput.pickItems
   const pickOptions = quickInput.pickOptions
 
   // 打开或切换 QuickInput 模式时重置 query 并聚焦。
   // 例如从命令搜索进入 Color Theme pick 时，visible 可能被 React 合并为一直 true。
   useEffect(() => {
     if (visible) {
+      const initialSelected = mode === 'pick' ? getInitialPickSelectedIndex(pickItems, pickOptions?.activeItemId) : 0
       setQuery('')
-      setSelected(0)
+      setSelected(initialSelected)
+      if (mode === 'pick') quickInput.setActivePickItem(pickItems[initialSelected])
       // 元素显示后再聚焦
       requestAnimationFrame(() => inputRef.current?.focus())
     }
-  }, [visible, mode])
+  }, [visible, mode, pickItems, pickOptions, quickInput])
 
   // 按模糊匹配分数过滤并排序命令/选择项
   const results = useMemo<PaletteEntry[]>(() => {
     void stateVersion
     void commandVersion
     if (mode === 'pick') {
-      return scorePickItems(quickInput.pickItems, query, item => quickInput.acceptPick(item))
+      return scorePickItems(pickItems, query, item => quickInput.acceptPick(item))
     }
 
     const commands = commandService.getCommands()
@@ -71,11 +75,11 @@ export function CommandPalette(): React.JSX.Element | null {
     }
     scored.sort((a, b) => b.score - a.score)
     return scored.map(s => commandToEntry(s.command, s.indices, quickInput.hide.bind(quickInput), commandService, keybindingService))
-  }, [query, mode, stateVersion, commandVersion, quickInput, commandService, keybindingService])
+  }, [query, mode, stateVersion, commandVersion, quickInput, commandService, keybindingService, pickItems])
 
   // 保持选中项不越界
   useEffect(() => {
-    setSelected(s => Math.min(s, Math.max(0, results.length - 1)))
+    setSelected(s => clampSelectedIndex(s, results.length))
   }, [results.length])
 
   // 将选中项滚动到可视区域
@@ -84,13 +88,22 @@ export function CommandPalette(): React.JSX.Element | null {
     el?.scrollIntoView({ block: 'nearest' })
   }, [selected])
 
+  const activateEntry = useCallback((entry: PaletteEntry | undefined) => {
+    if (mode !== 'pick') return
+    quickInput.setActivePickItem(entry?.pickItem)
+  }, [mode, quickInput])
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setSelected(s => Math.min(s + 1, results.length - 1))
+      const next = clampSelectedIndex(selected + 1, results.length)
+      setSelected(next)
+      activateEntry(results[next])
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      setSelected(s => Math.max(s - 1, 0))
+      const next = clampSelectedIndex(selected - 1, results.length)
+      setSelected(next)
+      activateEntry(results[next])
     } else if (e.key === 'Enter') {
       e.preventDefault()
       const item = results[selected]
@@ -99,7 +112,7 @@ export function CommandPalette(): React.JSX.Element | null {
       e.preventDefault()
       quickInput.hide()
     }
-  }, [results, selected, quickInput])
+  }, [results, selected, quickInput, activateEntry])
 
   if (!visible) return null
 
@@ -119,7 +132,12 @@ export function CommandPalette(): React.JSX.Element | null {
           className="command-palette__input"
           placeholder={placeholder}
           value={query}
-          onChange={e => { setQuery(e.target.value); setSelected(0) }}
+          onChange={e => {
+            const nextQuery = e.target.value
+            setQuery(nextQuery)
+            setSelected(0)
+            if (mode === 'pick') quickInput.setActivePickItem(getFirstMatchingPickItem(pickItems, nextQuery))
+          }}
           onKeyDown={handleKeyDown}
         />
         <div className="command-palette__list" ref={listRef}>
@@ -130,7 +148,10 @@ export function CommandPalette(): React.JSX.Element | null {
             <div
               key={item.key}
               className={`command-palette__item ${i === selected ? 'command-palette__item--selected' : ''}`}
-              onMouseEnter={() => setSelected(i)}
+              onMouseEnter={() => {
+                setSelected(i)
+                activateEntry(item)
+              }}
               onClick={() => item.execute()}
             >
               <span className="command-palette__item-label">
@@ -212,8 +233,32 @@ function pickItemToEntry(
     label: item.label,
     description: item.description,
     indices: indices.filter(i => i < item.label.length),
+    pickItem: item,
     execute: () => accept(item)
   }
+}
+
+function getInitialPickSelectedIndex(items: readonly QuickPickItem[], activeItemId: string | undefined): number {
+  if (!activeItemId) return 0
+  const index = items.findIndex(item => item.id === activeItemId)
+  return index >= 0 ? index : 0
+}
+
+function clampSelectedIndex(index: number, length: number): number {
+  if (length <= 0) return 0
+  return Math.min(Math.max(index, 0), length - 1)
+}
+
+function getFirstMatchingPickItem(items: readonly QuickPickItem[], query: string): QuickPickItem | undefined {
+  if (!query) return items[0]
+  const scored: { item: QuickPickItem; score: number }[] = []
+  for (const item of items) {
+    const searchLabel = item.description ? `${item.label} ${item.description}` : item.label
+    const match = fuzzyMatch(query, searchLabel)
+    if (match) scored.push({ item, score: match.score })
+  }
+  scored.sort((a, b) => b.score - a.score)
+  return scored[0]?.item
 }
 
 /** 将 label 空间中的命中索引转换到 title 空间 */

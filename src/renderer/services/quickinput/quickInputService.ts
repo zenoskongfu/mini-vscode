@@ -15,6 +15,7 @@ export interface QuickPickItem<T = unknown> {
 export interface QuickPickOptions {
   title?: string
   placeholder?: string
+  activeItemId?: string
 }
 
 export interface IQuickInputService {
@@ -22,16 +23,19 @@ export interface IQuickInputService {
 
   readonly onDidChange: Event<void>
   readonly onDidChangeVisibility: Event<boolean>
+  readonly onDidChangeActivePickItem: Event<QuickPickItem | undefined>
   readonly isVisible: boolean
   readonly mode: QuickInputMode
   readonly stateVersion: number
   readonly pickItems: readonly QuickPickItem[]
   readonly pickOptions: QuickPickOptions | undefined
+  readonly activePickItem: QuickPickItem | undefined
 
   show(): void
   hide(): void
   toggle(): void
   pick<T>(items: readonly QuickPickItem<T>[], options?: QuickPickOptions): Promise<QuickPickItem<T> | undefined>
+  setActivePickItem(item: QuickPickItem | undefined): void
   acceptPick(item: QuickPickItem): void
 }
 
@@ -49,12 +53,15 @@ export class QuickInputService implements IQuickInputService {
   private _stateVersion = 0
   private _pickItems: readonly QuickPickItem[] = []
   private _pickOptions: QuickPickOptions | undefined
+  private _activePickItem: QuickPickItem | undefined
   private _pendingPick: ((item: QuickPickItem | undefined) => void) | undefined
 
   private readonly _onDidChange = new Emitter<void>()
   readonly onDidChange = this._onDidChange.event
   private readonly _onDidChangeVisibility = new Emitter<boolean>()
   readonly onDidChangeVisibility = this._onDidChangeVisibility.event
+  private readonly _onDidChangeActivePickItem = new Emitter<QuickPickItem | undefined>()
+  readonly onDidChangeActivePickItem = this._onDidChangeActivePickItem.event
 
   get isVisible(): boolean {
     return this._visible
@@ -76,11 +83,16 @@ export class QuickInputService implements IQuickInputService {
     return this._pickOptions
   }
 
+  get activePickItem(): QuickPickItem | undefined {
+    return this._activePickItem
+  }
+
   show(): void {
     this.cancelPendingPick()
     this._mode = 'commands'
     this._pickItems = []
     this._pickOptions = undefined
+    this.setActivePickItem(undefined)
     this.setVisible(true)
   }
 
@@ -92,6 +104,7 @@ export class QuickInputService implements IQuickInputService {
     this._mode = 'commands'
     this._pickItems = []
     this._pickOptions = undefined
+    this.setActivePickItem(undefined)
     this.setVisible(false)
   }
 
@@ -115,6 +128,12 @@ export class QuickInputService implements IQuickInputService {
     this.resolvePick(item)
   }
 
+  setActivePickItem(item: QuickPickItem | undefined): void {
+    if (this._activePickItem === item) return
+    this._activePickItem = item
+    this._onDidChangeActivePickItem.fire(item)
+  }
+
   private cancelPendingPick(): void {
     if (!this._pendingPick) return
     this.resolvePick(undefined)
@@ -125,6 +144,7 @@ export class QuickInputService implements IQuickInputService {
     this._pendingPick = undefined
     this._pickItems = []
     this._pickOptions = undefined
+    this.setActivePickItem(undefined)
     this._mode = 'commands'
     this.setVisible(false)
     resolve?.(item)

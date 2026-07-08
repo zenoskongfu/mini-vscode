@@ -1,7 +1,7 @@
 import { IInstantiationService } from '../../instantiation/instantiation'
 import { ICommandService } from '../../services/commands/commandService'
 import { IKeybindingService } from '../../services/keybinding/keybindingService'
-import { IQuickInputService } from '../../services/quickinput/quickInputService'
+import { IQuickInputService, type QuickPickItem } from '../../services/quickinput/quickInputService'
 import { ILayoutService, type ActivityView } from '../../services/layout/layoutService'
 import { IWorkspaceService } from '../../services/workspace/workspaceService'
 import { IEditorService } from '../../services/editor/editorService'
@@ -175,19 +175,38 @@ export function registerWorkbenchContributions(insta: IInstantiationService): vo
     'Color Theme',
     'Preferences',
     async () => {
-      const selected = await quickInputService.pick(
-        themeService.getColorThemes().map(theme => ({
-          id: theme.id,
-          label: theme.label,
-          description: theme.id === themeService.current.id ? 'Current' : theme.type === 'dark' ? 'Dark' : 'Light',
-          value: theme.id
-        })),
-        {
-          title: 'Preferences: Color Theme',
-          placeholder: 'Select Color Theme'
+      const previousThemeId = themeService.current.id
+      const previewListener = quickInputService.onDidChangeActivePickItem(item => {
+        const themeId = item?.value
+        if (typeof themeId === 'string' && themeId !== themeService.current.id) {
+          themeService.applyTheme(themeId)
         }
-      )
-      if (selected) await configurationService.updateValue('workbench.colorTheme', selected.value)
+      })
+
+      let selected: QuickPickItem<string> | undefined = undefined
+      try {
+        selected = await quickInputService.pick(
+          themeService.getColorThemes().map(theme => ({
+            id: theme.id,
+            label: theme.label,
+            description: theme.id === previousThemeId ? 'Current' : theme.type === 'dark' ? 'Dark' : 'Light',
+            value: theme.id
+          })),
+          {
+            title: 'Preferences: Color Theme',
+            placeholder: 'Select Color Theme',
+            activeItemId: previousThemeId
+          }
+        )
+      } finally {
+        previewListener.dispose()
+      }
+
+      if (selected) {
+        await configurationService.updateValue('workbench.colorTheme', selected.value)
+      } else {
+        themeService.applyTheme(previousThemeId)
+      }
     }
   )
 }
