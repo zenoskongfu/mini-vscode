@@ -5,6 +5,8 @@ import { IConfigurationService } from '../configuration/configurationService'
 import type { ColorThemeData } from '../../themes/theme-types'
 import { darkPlus } from '../../themes/dark-plus'
 import { lightPlus } from '../../themes/light-plus'
+import { loadColorThemeFromJson } from '../../themes/color-theme-json-loader'
+import learningJsonTheme from '../../themes/learning-json-theme.json'
 import { defineMonacoTheme, monaco, monacoThemeName } from '../monaco-setup'
 
 const THEME_SETTING = 'workbench.colorTheme'
@@ -12,7 +14,13 @@ const DEFAULT_COLOR_THEME_ID = darkPlus.id
 
 const BUILTIN_COLOR_THEMES: ColorThemeData[] = [
   { ...darkPlus, source: 'builtin' },
-  { ...lightPlus, source: 'builtin' }
+  { ...lightPlus, source: 'builtin' },
+  loadColorThemeFromJson({
+    id: 'Learning JSON Dark',
+    source: 'builtin',
+    baseTheme: darkPlus,
+    json: learningJsonTheme
+  })
 ]
 
 export interface IThemeService {

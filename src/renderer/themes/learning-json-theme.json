@@ -1,0 +1,73 @@
+{
+  "name": "Learning JSON Dark",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#111827",
+    "editor.foreground": "#d1d5db",
+    "editor.lineHighlightBackground": "#1f2937",
+    "editor.selectionBackground": "#334155",
+    "editorCursor.foreground": "#fbbf24",
+    "editorLineNumber.foreground": "#6b7280",
+    "editorLineNumber.activeForeground": "#f9fafb",
+    "sideBar.background": "#0f172a",
+    "sideBar.foreground": "#d1d5db",
+    "activityBar.background": "#020617",
+    "activityBar.foreground": "#f8fafc",
+    "activityBar.inactiveForeground": "#64748b",
+    "statusBar.background": "#2563eb",
+    "statusBar.foreground": "#ffffff",
+    "titleBar.activeBackground": "#111827",
+    "titleBar.activeForeground": "#f9fafb",
+    "tab.activeBackground": "#111827",
+    "tab.inactiveBackground": "#1f2937",
+    "tab.inactiveForeground": "#94a3b8",
+    "tab.activeBorder": "#fbbf24",
+    "panel.background": "#0f172a",
+    "panel.border": "#334155",
+    "input.background": "#111827",
+    "input.foreground": "#f9fafb",
+    "dropdown.background": "#111827",
+    "list.hoverBackground": "#1e293b",
+    "list.activeSelectionBackground": "#1d4ed8",
+    "focusBorder": "#fbbf24"
+  },
+  "tokenColors": [
+    {
+      "scope": "comment",
+      "settings": {
+        "foreground": "#94a3b8",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "scope": ["string", "string.quoted"],
+      "settings": {
+        "foreground": "#86efac"
+      }
+    },
+    {
+      "scope": "keyword",
+      "settings": {
+        "foreground": "#93c5fd",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "scope": "number",
+      "settings": {
+        "foreground": "#fbbf24"
+      }
+    }
+  ],
+  "semanticHighlighting": true,
+  "semanticTokenColors": {
+    "function": "#fde68a",
+    "variable.readonly": {
+      "foreground": "#fca5a5",
+      "fontStyle": "bold"
+    },
+    "property": {
+      "foreground": "#bae6fd"
+    }
+  }
+}

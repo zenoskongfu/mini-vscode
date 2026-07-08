@@ -23,6 +23,10 @@ export interface ThemeDefinition {
    * 因此同时覆盖语法高亮与语义高亮。基于 base 主题 inherit，可只列覆盖项。
    */
   tokenRules?: ThemeTokenRule[]
+  /** 学习版保留 VS Code JSON 中的 semanticHighlighting 标记 */
+  semanticHighlighting?: boolean
+  /** 原始 semanticTokenColors 数据；loader 会把能理解的部分同步转成 tokenRules */
+  semanticTokenColors?: Record<string, unknown>
 }
 
 export type ColorThemeSource = 'builtin' | 'extension'
