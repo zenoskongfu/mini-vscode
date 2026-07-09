@@ -119,9 +119,9 @@ export function monacoThemeName(themeId: string): string {
 }
 
 /** 用主题里的语法规则 + CSS 调色板，注册成 Monaco 自定义主题 */
-export function defineMonacoTheme(theme: ThemeDefinition): void {
+export function defineMonacoTheme(theme: ThemeDefinition, force = false): void {
 	const themeName = monacoThemeName(theme.id);
-	if (definedMonacoThemes.has(themeName)) return;
+	if (!force && definedMonacoThemes.has(themeName)) return;
 
 	monaco.editor.defineTheme(themeName, {
 		base: theme.monacoBase,

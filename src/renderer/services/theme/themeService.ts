@@ -6,10 +6,13 @@ import type { ColorThemeData } from '../../themes/theme-types'
 import { darkPlus } from '../../themes/dark-plus'
 import { lightPlus } from '../../themes/light-plus'
 import { loadColorThemeFromJson } from '../../themes/color-theme-json-loader'
+import { resolveThemeCustomizations } from '../../themes/theme-customizations'
 import learningJsonTheme from '../../themes/learning-json-theme.json'
 import { defineMonacoTheme, monaco, monacoThemeName } from '../monaco-setup'
 
 const THEME_SETTING = 'workbench.colorTheme'
+const WORKBENCH_COLOR_CUSTOMIZATIONS_SETTING = 'workbench.colorCustomizations'
+const EDITOR_TOKEN_COLOR_CUSTOMIZATIONS_SETTING = 'editor.tokenColorCustomizations'
 const DEFAULT_COLOR_THEME_ID = darkPlus.id
 
 const BUILTIN_COLOR_THEMES: ColorThemeData[] = [
@@ -90,11 +93,12 @@ export class ThemeService implements IThemeService {
 
   private applyFromConfig(): void {
     const id = this.configurationService.getValue<string>(THEME_SETTING, DEFAULT_COLOR_THEME_ID)
-    if (id !== this._current.id) this.applyTheme(id)
+    this.applyTheme(id)
   }
 
   applyTheme(id: string): void {
-    const theme = this._colorThemes.get(id) ?? this.getFallbackTheme()
+    const baseTheme = this._colorThemes.get(id) ?? this.getFallbackTheme()
+    const theme = this.createCustomizedTheme(baseTheme)
     this._current = theme
 
     // 1. CSS 自定义属性 → :root
@@ -106,8 +110,8 @@ export class ThemeService implements IThemeService {
     root.style.colorScheme = theme.type
     root.setAttribute('data-theme', theme.type)
 
-    // 2. Monaco 编辑器主题：切到该主题的自定义 Monaco 主题（含语法/语义着色）。
-    //    主题已在 setupMonaco() 启动时 defineTheme 过，这里只需 setTheme。
+    // 2. Monaco 编辑器主题：用户 token 覆盖会改变同名主题规则，因此这里强制重新 define。
+    defineMonacoTheme(theme, true)
     monaco.editor.setTheme(monacoThemeName(theme.id))
 
     this._onDidChangeTheme.fire(theme)
@@ -120,6 +124,26 @@ export class ThemeService implements IThemeService {
 
   private getFallbackTheme(): ColorThemeData {
     return this._colorThemes.get(DEFAULT_COLOR_THEME_ID) ?? BUILTIN_COLOR_THEMES[0]
+  }
+
+  private createCustomizedTheme(baseTheme: ColorThemeData): ColorThemeData {
+    const customizations = resolveThemeCustomizations(
+      this.configurationService.getValue<unknown>(WORKBENCH_COLOR_CUSTOMIZATIONS_SETTING, undefined),
+      this.configurationService.getValue<unknown>(EDITOR_TOKEN_COLOR_CUSTOMIZATIONS_SETTING, undefined),
+      baseTheme.id
+    )
+
+    return {
+      ...baseTheme,
+      colors: {
+        ...baseTheme.colors,
+        ...customizations.colors
+      },
+      tokenRules: [
+        ...(baseTheme.tokenRules ?? []),
+        ...customizations.tokenRules
+      ]
+    }
   }
 }
 

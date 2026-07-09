@@ -178,7 +178,7 @@ function normalizeBooleanField(value: unknown, field: string, themeId: string): 
   return undefined
 }
 
-function mapWorkbenchColors(colors: Record<string, unknown>, themeId: string): Record<string, string> {
+export function mapWorkbenchColors(colors: Record<string, unknown>, themeId: string): Record<string, string> {
   const result: Record<string, string> = {}
   for (const [colorId, rawValue] of Object.entries(colors)) {
     const cssVar = VSCODE_COLOR_TO_CSS_VAR[colorId]
@@ -195,7 +195,7 @@ function mapWorkbenchColors(colors: Record<string, unknown>, themeId: string): R
   return result
 }
 
-function mapTokenColors(tokenColors: unknown[], themeId: string): ThemeTokenRule[] {
+export function mapTokenColors(tokenColors: unknown[], themeId: string): ThemeTokenRule[] {
   const rules: ThemeTokenRule[] = []
   for (const entry of tokenColors) {
     if (!isObject(entry)) {
