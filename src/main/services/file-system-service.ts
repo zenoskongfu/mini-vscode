@@ -15,6 +15,8 @@ export interface FileChangeEvent {
   path: string
 }
 
+const DEFAULT_EXCLUDED_NAMES = new Set(['.git', '.svn', '.hg', 'CVS', '.DS_Store', 'Thumbs.db'])
+
 export class FileSystemService {
   /** 活跃的 chokidar watcher，以被监听的根路径为 key */
   private watchers = new Map<string, FSWatcher>()
@@ -26,7 +28,7 @@ export class FileSystemService {
     const entries = await fs.readdir(dirPath, { withFileTypes: true })
 
     const nodes: FileNode[] = entries
-      .filter(e => !e.name.startsWith('.'))   // 隐藏点文件
+      .filter(e => !DEFAULT_EXCLUDED_NAMES.has(e.name))
       .map(e => ({
         name: e.name,
         path: path.join(dirPath, e.name),
@@ -92,11 +94,13 @@ export class FileSystemService {
 
     const watcher = watch(rootPath, {
       ignored: [
-        /(^|[/\\])\../,       // 点文件
-        /node_modules/,
-        /\.git/,
-        /out\//,
-        /dist\//
+        /(^|[/\\])node_modules([/\\]|$)/,
+        /(^|[/\\])\.git([/\\]|$)/,
+        /(^|[/\\])\.svn([/\\]|$)/,
+        /(^|[/\\])\.hg([/\\]|$)/,
+        /(^|[/\\])CVS([/\\]|$)/,
+        /(^|[/\\])out([/\\]|$)/,
+        /(^|[/\\])dist([/\\]|$)/
       ],
       persistent: true,
       ignoreInitial: true,
