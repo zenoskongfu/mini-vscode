@@ -1,97 +1,95 @@
 # Mini VSCode
 
-一个用于学习 Electron 与 VS Code 内部架构的 mini VSCode 克隆。
+A compact VS Code clone built for learning Electron and the architecture behind VS Code.
 
-这个项目的目标不是做一个功能完整的编辑器，而是把 VS Code 桌面端最关键的工程骨架用更小的代码量复刻出来：多进程隔离、preload 安全桥、renderer 侧服务/DI、命令系统、Monaco 编辑器、终端、扩展宿主、RPC、语言能力和 DAP 调试链路。
+This project is not trying to become a full editor. Its goal is to re-create the most important desktop architecture patterns from VS Code in a smaller, readable codebase: process isolation, a secure preload bridge, renderer-side services and dependency injection, a command registry, Monaco integration, an integrated terminal, an extension host, RPC, language features, and a DAP-based debugging path.
 
-## 项目定位
+## What This Project Is
 
-Mini VSCode 更像一份可运行的架构学习材料。它刻意保留 VS Code 的心智模型，而不是把事情改成普通 Electron App 里更直接的写法。
+Mini VSCode is a runnable architecture study. It deliberately keeps the VS Code mental model instead of replacing it with shortcuts that would be more typical in a small Electron app.
 
-核心原则：
+Core principles:
 
-- renderer 是受限的 Web 环境，不直接访问 Node/Electron 能力。
-- main 进程拥有文件系统、终端、调试适配器和窗口等特权能力。
-- preload 是唯一安全桥，向 renderer 暴露 `window.electronAPI`。
-- renderer 在 VS Code 语义里扮演 main thread，持有 workbench、service、command、editor state。
-- extension host 是独立 Node 进程，通过 MessagePort + RPC 与 renderer 通信。
-- 业务状态放在 service 里，通过 `Emitter/Event` 推送变化，再由 React 投影到 UI。
-- 所有入口最终收敛到 `CommandService.executeCommand(id, ...args)`。
+- The renderer is a sandboxed web environment and does not directly access Node or Electron APIs.
+- The main process owns privileged capabilities such as the filesystem, terminal, debug adapters, app paths, and windows.
+- The preload script is the only bridge into the renderer and exposes a controlled `window.electronAPI`.
+- In VS Code terms, the renderer acts as the "main thread": it owns the workbench, services, commands, editor state, and extension-facing main-thread implementations.
+- The extension host is an isolated Node process that talks to the renderer through MessagePort-based RPC.
+- Application state lives in services and changes are pushed through `Emitter/Event`.
+- User actions, keybindings, palette entries, menus, and extensions all converge on `CommandService.executeCommand(id, ...args)`.
 
-## 已实现的学习切片
+## Implemented Learning Slices
 
-- 类 VS Code 工作台布局：Activity Bar、Sidebar、Editor Area、Panel、Status Bar。
-- 文件工作区：打开文件夹、文件树、创建、重命名、删除、保存、文件变化监听。
-- Monaco 编辑器：tab、model 复用、dirty 状态、主题切换、基础语言体验。
-- 命令系统：命令注册、命令面板、快捷键分发、统一 `executeCommand` 入口。
-- renderer DI 容器：`createDecorator`、`ServiceCollection`、`InstantiationService`、懒实例化。
-- 集成终端：main 进程持有 `node-pty`，renderer 只接收终端数据流并发送输入。
-- 扩展系统：gallery、安装/卸载/启用/禁用、manifest commands、lazy activation。
-- 扩展宿主：Electron `utilityProcess` 隔离运行扩展代码，并提供简化版 `vscode` API。
-- RPC 通道：renderer 与 extension host 通过共享 `RPCProtocol` 双向调用。
-- 语言能力：TypeScript diagnostics、go-to-definition，以及 LSP over stdio 的学习版本。
-- 调试链路：renderer UI -> main `DebugService` -> DAP session -> mock/JS debug adapter。
-- 主题系统：内置主题、JSON 主题加载、设置项驱动主题应用。
+- VS Code-like workbench layout: Activity Bar, Sidebar, Editor Area, Panel, and Status Bar.
+- Workspace filesystem features: open folder, file tree, create, rename, delete, save, and file change watching.
+- Monaco editor integration: tabs, reusable models, dirty state, themes, and basic language experience.
+- Command system: command registration, command palette, keybinding dispatch, and a shared execution entry point.
+- Renderer dependency injection: `createDecorator`, `ServiceCollection`, `InstantiationService`, and lazy singleton services.
+- Integrated terminal: `node-pty` lives in the main process while the renderer only streams terminal data and sends input.
+- Extension system: gallery extensions, install/uninstall, enable/disable, manifest commands, and lazy activation.
+- Extension host: Electron `utilityProcess` isolation with a simplified `vscode` API.
+- RPC channel: renderer and extension host communicate through a shared `RPCProtocol`.
+- Language features: TypeScript diagnostics, go-to-definition, and a learning-oriented LSP-over-stdio path.
+- Debugging path: renderer UI -> main `DebugService` -> DAP session -> mock or JavaScript debug adapter.
+- Theme system: built-in themes, JSON theme loading, and configuration-driven theme application.
 
-## 运行环境
+## Requirements
 
-项目使用 pnpm，版本写在 `package.json`：
+The project uses pnpm. The expected version is declared in `package.json`:
 
 ```bash
 pnpm --version
 ```
 
-安装依赖：
+Install dependencies:
 
 ```bash
 pnpm install
 ```
 
-注意：项目依赖 `@homebridge/node-pty-prebuilt-multiarch` 作为终端 native 模块，安装后会通过 `postinstall` 执行 rebuild。不要删除 `.npmrc` 里的 `ignore-scripts=false` 和 `approve-builds[]` 配置，否则终端模块可能无法按 Electron ABI 正确构建。
+The integrated terminal depends on `@homebridge/node-pty-prebuilt-multiarch`, which is rebuilt for Electron after install. Keep the `.npmrc` settings that allow install scripts to run; otherwise the terminal native module may not match Electron's ABI.
 
-## 常用命令
+## Common Commands
+
+Start the real Electron app with HMR:
 
 ```bash
 pnpm dev
 ```
 
-启动真实 Electron 应用。main、preload、renderer 都走 electron-vite 开发链路，适合验证完整行为。
+Build the Electron app into `out/`:
 
 ```bash
 pnpm build
 ```
 
-构建产物到 `out/`：
-
-- `out/main`
-- `out/preload`
-- `out/renderer`
+Run an Electron preview from the built output:
 
 ```bash
 pnpm preview
 ```
 
-运行 electron-vite preview，用构建后的 Electron 产物预览应用。
+Package the app with electron-builder into `dist/`:
 
 ```bash
 pnpm package
 ```
 
-使用 electron-builder 打包，产物输出到 `dist/`。
+Rebuild the terminal native dependency for Electron:
 
 ```bash
 pnpm rebuild:native
 ```
 
-重新编译 `node-pty` 相关 native 依赖。如果启动时报 `NODE_MODULE_VERSION` 或 ABI 不匹配，先运行这个命令。
+Run TypeScript type checking:
 
 ```bash
 pnpm tsc
 ```
 
-执行 TypeScript 类型检查。当前项目没有配置测试框架和 lint，主要验证方式是 `pnpm dev` 后在真实 Electron 窗口中检查行为和控制台日志。
+There is currently no test runner or linter configured. The practical verification loop is `pnpm dev`, then checking behavior and console logs in the real Electron window. `pnpm tsc` is useful for project-wide type checks.
 
-## 架构总览
+## Architecture Overview
 
 ```mermaid
 flowchart LR
@@ -111,113 +109,123 @@ flowchart LR
   Main <-- "DAP stdio/socket" --> Adapter
 ```
 
-### main
+### Main Process
 
-目录：`src/main/`
+Directory: `src/main/`
 
-main 进程拥有系统能力：窗口、文件系统、配置、终端、扩展安装、调试适配器进程、应用路径。renderer 不能绕过 preload 直接调用这些能力。
+The main process owns system capabilities: windows, filesystem access, configuration, terminal processes, extension installation, debug adapter processes, and application paths. The renderer must request those capabilities through the preload bridge.
 
-关键文件：
+Key files:
 
-- `src/main/index.ts`：应用启动入口。
-- `src/main/window-manager.ts`：创建 BrowserWindow，配置 preload 和安全选项。
-- `src/main/ipc-router.ts`：集中注册 renderer -> main 的 IPC handler。
-- `src/main/services/file-system-service.ts`：文件系统真相与 chokidar 监听。
-- `src/main/services/terminal-service.ts`：`node-pty` 终端生命周期。
-- `src/main/extensions/extensionManagementService.ts`：扩展 gallery 与安装目录管理。
-- `src/main/extensions/extensionHostProcess.ts`：启动 extension host 并交接 MessagePort。
-- `src/main/services/debug-service.ts`：调试会话入口。
-- `src/main/debug/dap-session.ts`：DAP 请求、响应和事件处理。
+- `src/main/index.ts`: application entry point.
+- `src/main/window-manager.ts`: creates the `BrowserWindow` and configures preload and security options.
+- `src/main/ipc-router.ts`: central registry for renderer-to-main IPC handlers.
+- `src/main/services/file-system-service.ts`: filesystem source of truth and chokidar watcher.
+- `src/main/services/terminal-service.ts`: `node-pty` terminal lifecycle.
+- `src/main/extensions/extensionManagementService.ts`: gallery and installed extension management.
+- `src/main/extensions/extensionHostProcess.ts`: starts the extension host and hands off the MessagePort.
+- `src/main/services/debug-service.ts`: debug session entry point.
+- `src/main/debug/dap-session.ts`: DAP request, response, and event handling.
 
-### preload
+### Preload
 
-目录：`src/preload/`
+Directory: `src/preload/`
 
-preload 是主进程能力进入 renderer 的唯一桥。它通过 `contextBridge.exposeInMainWorld` 暴露 `window.electronAPI`，renderer 侧只拿到受控的异步 API。
+The preload script is the only safe bridge between privileged Electron APIs and the sandboxed renderer. It exposes `window.electronAPI` through `contextBridge.exposeInMainWorld`, and it forwards the extension-host MessagePort from Electron's isolated preload world into the renderer main world.
 
-这里也负责把 main 交给 preload 的 extension-host MessagePort 再转发到 renderer 主世界。
+### Renderer
 
-### renderer
+Directory: `src/renderer/`
 
-目录：`src/renderer/`
+The renderer is the workbench and the closest equivalent to VS Code's main thread in this project. React components handle display and interaction; durable state and behavior live in services.
 
-renderer 是工作台主体，也是本项目最接近 VS Code main thread 的地方。React 组件只负责展示和交互，状态与行为主要沉在 service 里。
+Key directories:
 
-关键目录：
+- `src/renderer/workbench/`: workbench shell and layout.
+- `src/renderer/components/`: editor, explorer, terminal, debug, command palette, notifications, and extensions UI.
+- `src/renderer/services/`: editor, commands, keybindings, layout, workspace, themes, language features, diagnostics, storage, and more.
+- `src/renderer/instantiation/`: VS Code-style dependency injection container.
+- `src/renderer/base/event.ts`: `Emitter/Event` reactive primitive.
+- `src/renderer/base/lifecycle.ts`: `IDisposable` and `DisposableStore`.
+- `src/renderer/platform/bootstrap.ts`: imports singleton registration side effects and creates the root container.
+- `src/renderer/workbench/contrib/registerContributions.ts`: registers built-in commands and default keybindings.
 
-- `src/renderer/workbench/`：工作台布局。
-- `src/renderer/components/`：编辑器、资源管理器、终端、调试、扩展视图等 UI。
-- `src/renderer/services/`：编辑器、命令、快捷键、布局、工作区、主题、语言能力等服务。
-- `src/renderer/instantiation/`：VS Code 风格 DI 容器。
-- `src/renderer/base/event.ts`：`Emitter/Event` 响应式基础。
-- `src/renderer/base/lifecycle.ts`：`IDisposable` 与 `DisposableStore`。
-- `src/renderer/platform/bootstrap.ts`：导入 singleton 注册副作用并创建根容器。
-- `src/renderer/workbench/contrib/registerContributions.ts`：注册内置命令与默认快捷键。
+### Extension Host
 
-### extension host
+Directory: `src/exthost/`
 
-目录：`src/exthost/`
+The extension host runs inside an Electron `utilityProcess` and does not directly access renderer objects. Extension code uses the simplified `vscode` API to execute commands, register language features, and show messages. Those calls flow back to renderer-side main-thread implementations through RPC.
 
-extension host 运行在 Electron `utilityProcess` 中，不直接访问 renderer 内部对象。扩展代码通过简化版 `vscode` API 调用命令、注册语言能力、发送消息，最终经 RPC 回到 renderer 的 main-thread 实现。
+Key files:
 
-关键文件：
+- `src/exthost/extensionHostMain.ts`: extension host entry point.
+- `src/exthost/vscode-api.ts`: simplified `vscode` API.
+- `src/exthost/extHostCommands.ts`: extension-side command registration and execution.
+- `src/exthost/extHostLanguageFeatures.ts`: language feature bridge.
+- `src/exthost/extHostDocuments.ts`: document synchronization.
+- `src/platform/rpc/`: shared renderer and extension-host RPC protocol.
 
-- `src/exthost/extensionHostMain.ts`：扩展宿主入口。
-- `src/exthost/vscode-api.ts`：简化版 `vscode` API。
-- `src/exthost/extHostCommands.ts`：扩展侧命令注册与执行。
-- `src/exthost/extHostLanguageFeatures.ts`：扩展侧语言能力桥。
-- `src/exthost/extHostDocuments.ts`：文档同步。
-- `src/platform/rpc/`：renderer 与 extension host 共享的 RPC 协议实现。
+## Four VS Code Pillars
 
-## VS Code 四个核心支柱
+### 1. Dependency Injection
 
-### 1. DI 容器
-
-依赖通过参数装饰器注入：
+Dependencies are injected through parameter decorators:
 
 ```ts
 constructor(@ICommandService private readonly commandService: ICommandService) {}
 ```
 
-`ICommandService` 同时是 TypeScript interface、参数装饰器和 DI token。依赖信息由装饰器运行时写到构造函数静态字段，不依赖 `reflect-metadata`，也不需要 `emitDecoratorMetadata`。
+`ICommandService` is the TypeScript interface, the parameter decorator, and the DI token. Dependency metadata is written to a static constructor field at runtime by the decorator. The project does not rely on `reflect-metadata` or `emitDecoratorMetadata`, which keeps the pattern compatible with esbuild and electron-vite.
 
-这正是本项目能在 esbuild/electron-vite 下使用 VS Code 风格 DI 的原因。
+### 2. Services and Singleton Registration
 
-### 2. Service + singleton 注册
+Service modules call `registerSingleton()` as an import side effect. `src/renderer/platform/bootstrap.ts` imports those modules, collects the singleton descriptors, and builds the root `InstantiationService`.
 
-service 模块通过 `registerSingleton()` 注册自己。`platform/bootstrap.ts` 导入这些模块，让注册副作用发生，再从 `getSingletonServiceDescriptors()` 构造根 `InstantiationService`。
+When adding a service, do both:
 
-新增 service 时要同时做两件事：
+1. Register it with `registerSingleton(IServiceId, ServiceImpl)`.
+2. Import the service module in `src/renderer/platform/bootstrap.ts`.
 
-1. 在 service 文件里 `registerSingleton(IServiceId, ServiceImpl)`。
-2. 在 `src/renderer/platform/bootstrap.ts` 导入该 service 文件。
+Without the import, the registration side effect never runs.
 
-### 3. Emitter/Event 响应式状态
+### 3. Emitter/Event State
 
-状态放在 service 内部。状态变化后 service `fire()` 一个事件，React 组件用 `useService` + `useEvent` 订阅，再读取最新状态。
+State lives inside services. When state changes, a service calls `fire()` on an `Emitter`. React components subscribe with `useService` and `useEvent`, then read the fresh state from the service.
 
-注意 `useEvent` 的 selector 必须在无变化时返回同一个引用。例如返回 `service.tabs`，不要返回 `[...service.tabs]`，否则会导致无限重渲染。
+`useEvent` selectors must be reference-stable when nothing changes. Prefer:
 
-### 4. Command registry
+```ts
+useEvent(service.onDidChangeTabs, () => service.tabs)
+```
 
-命令 id 是中间货币。快捷键、命令面板、菜单、扩展都只需要知道 command id，实现方把 handler 注册给 `CommandService`。
+Avoid:
 
-执行入口统一为：
+```ts
+useEvent(service.onDidChangeTabs, () => [...service.tabs])
+```
+
+The second form creates a new array each time and can cause an infinite render loop.
+
+### 4. Command Registry
+
+Command ids are the middle currency of the app. Keybindings, command palette entries, menus, and extensions only need command ids. Implementations register handlers with `CommandService`.
+
+The shared execution entry point is:
 
 ```ts
 commandService.executeCommand(id, ...args)
 ```
 
-这样内置命令与扩展命令可以共享同一条执行链。
+This lets built-in commands and extension commands share the same execution path.
 
-## 扩展目录
+## Extensions
 
 ```text
-extensions/  # 内置扩展，随应用发布
-gallery/     # 可安装扩展市场，供 Extensions 视图安装
+extensions/  # Built-in extensions shipped with the app
+gallery/     # Installable sample extensions shown in the Extensions view
 ```
 
-当前示例扩展包括：
+Sample extensions include:
 
 - `word-count`
 - `insert-date`
@@ -225,11 +233,11 @@ gallery/     # 可安装扩展市场，供 Extensions 视图安装
 - `ts-language-features`
 - `ts-lsp`
 
-开发态下，内置扩展来自项目根目录的 `extensions/`。生产包里，内置扩展和 gallery 会作为 extra resources 放到应用资源目录；用户安装扩展写入 `app.getPath('userData')/extensions`，避免写入只读的 `app.asar`。
+In development, built-in extensions are loaded from the repository's `extensions/` directory. In packaged builds, built-in extensions and gallery extensions are copied as extra resources. User-installed extensions are written to `app.getPath('userData')/extensions`, avoiding writes into read-only packaged app resources.
 
-## 调试系统
+## Debugging System
 
-调试能力按 VS Code 的分层来理解：
+The debug stack follows the same broad layering as VS Code:
 
 ```text
 DebugView / DebugService(renderer)
@@ -239,36 +247,36 @@ DebugView / DebugService(renderer)
   -> debug adapter
 ```
 
-renderer 负责 UI 状态、断点展示和命令入口；main 负责启动 adapter、维护 DAP transport、转发 DAP event。这样 renderer 仍然保持沙箱化，不直接 spawn 进程。
+The renderer owns UI state, breakpoint display, and command entry points. The main process starts adapters, owns the DAP transport, and forwards DAP events back to the renderer.
 
-## 浏览器预览 mock
+## Browser Preview Mock
 
-`src/renderer/mocks/electron-api-mock.ts` 提供了浏览器环境下的 `window.electronAPI` mock，用于不启动 Electron 时预览 renderer UI。它会模拟文件系统、终端、配置、状态、扩展列表等能力。
+`src/renderer/mocks/electron-api-mock.ts` provides a browser-only mock for `window.electronAPI`. It is useful when previewing the renderer without Electron. The mock simulates filesystem, terminal, configuration, state, and extension APIs.
 
-真实 Electron 运行时由 preload 注入真正的 `window.electronAPI`，mock 不会覆盖它。
+The real Electron app gets the real `window.electronAPI` from preload, and the mock does not overwrite it.
 
-## 项目结构
+## Project Structure
 
 ```text
 .
-├── docs/                 # 中文架构笔记与专题文档
-├── extensions/           # 内置扩展
-├── gallery/              # 可安装扩展示例
-├── scripts/              # 辅助脚本
+├── docs/                 # Architecture notes and focused implementation docs
+├── extensions/           # Built-in extensions
+├── gallery/              # Installable sample extensions
+├── scripts/              # Helper scripts
 ├── src/
-│   ├── main/             # Electron main 进程
-│   ├── preload/          # contextBridge 安全桥
-│   ├── renderer/         # React workbench 与 VS Code main-thread 侧服务
-│   ├── exthost/          # 扩展宿主进程入口与简化 vscode API
-│   └── platform/rpc/     # renderer <-> extension host RPC
+│   ├── main/             # Electron main process
+│   ├── preload/          # contextBridge bridge
+│   ├── renderer/         # React workbench and VS Code main-thread services
+│   ├── exthost/          # Extension host entry and simplified vscode API
+│   └── platform/rpc/     # Renderer <-> extension host RPC
 ├── electron.vite.config.ts
 ├── vite.preview.config.ts
 └── package.json
 ```
 
-## 推荐阅读顺序
+## Suggested Reading Order
 
-如果你是为了学习 VS Code 架构，可以按这个顺序读：
+If you are reading this project to learn the architecture, start here:
 
 1. `docs/architecture-notes.md`
 2. `docs/di-and-decorators.md`
@@ -283,63 +291,48 @@ renderer 负责 UI 状态、断点展示和命令入口；main 负责启动 adap
 11. `src/main/services/debug-service.ts`
 12. `src/main/debug/dap-session.ts`
 
-主题、打包路径、native 模块问题可以继续读：
+For packaging paths and native module issues, continue with:
 
-- `docs/theme-system-roadmap.md`
-- `docs/theme-plans.md`
 - `docs/packaged-paths-and-extensions.md`
 - `docs/node-pty-native-build.md`
 
-## 常见坑
+## Common Pitfalls
 
-### renderer 不能直接 import Node 模块
+### The renderer cannot import Node modules directly
 
-不要在 `src/renderer/**` 中直接 `import fs from 'fs'` 或使用 Electron main-only API。renderer 只能通过 `window.electronAPI` 请求 main 暴露的能力。
+Do not import `fs`, `node-pty`, or Electron main-process APIs from `src/renderer/**`. The renderer can only use capabilities exposed through `window.electronAPI`.
 
-### 编译通过不等于运行正确
+### Passing build is not the same as running correctly
 
-这个项目里不少问题只在运行时暴露，例如：
+Several issues in this project only appear at runtime:
 
-- DI 参数装饰器是否被 esbuild 正确处理。
-- React 是否被 dedupe，否则可能出现 invalid hook call。
-- Allotment 初始尺寸测量是否正确。
-- `node-pty` native ABI 是否匹配 Electron。
-- extension host 的 MessagePort 是否已完成交接。
+- Whether DI parameter decorators were transformed correctly by esbuild.
+- Whether React was deduped, otherwise Allotment can throw an invalid hook call.
+- Whether Allotment measured panel sizes after mount.
+- Whether the `node-pty` native ABI matches Electron.
+- Whether the extension-host MessagePort handoff completed.
 
-### native 终端模块 ABI 不匹配
+### Terminal native ABI mismatch
 
-如果终端相关功能启动失败，优先尝试：
+If terminal startup fails with a `NODE_MODULE_VERSION` or ABI mismatch error, run:
 
 ```bash
 pnpm rebuild:native
 ```
 
-如果仍然失败，参考 `docs/node-pty-native-build.md`。
+If it still fails, see `docs/node-pty-native-build.md`.
 
-### 新增 service 后没有生效
+### A new service does not work
 
-确认 service 文件是否被 `src/renderer/platform/bootstrap.ts` 导入。只写 `registerSingleton()` 但没有导入模块，注册副作用不会执行。
+Check whether its module is imported from `src/renderer/platform/bootstrap.ts`. Calling `registerSingleton()` in a file is not enough unless that file is imported.
 
-### `useEvent` 无限渲染
+### `useEvent` causes infinite rendering
 
-检查 selector 是否每次都创建新引用。稳定写法：
+Check whether the selector creates a new reference every time. Return stable service-owned references when no state has changed.
 
-```ts
-useEvent(service.onDidChangeTabs, () => service.tabs)
-```
+## Reference Docs
 
-危险写法：
-
-```ts
-useEvent(service.onDidChangeTabs, () => [...service.tabs])
-```
-
-## 参考文档
-
-- `docs/architecture-notes.md`：项目架构主线与 10 个关键学习点。
-- `docs/di-and-decorators.md`：命令解耦与 VS Code 风格 DI。
-- `docs/node-pty-native-build.md`：native 终端模块构建与排错。
-- `docs/packaged-paths-and-extensions.md`：开发/生产路径差异与扩展目录设计。
-- `docs/theme-system-roadmap.md`：主题系统实现路线。
-- `docs/theme-plans.md`：主题系统阶段计划。
-
+- `docs/architecture-notes.md`: architecture thread and the key learning points.
+- `docs/di-and-decorators.md`: command decoupling and VS Code-style DI.
+- `docs/node-pty-native-build.md`: native terminal module build and troubleshooting.
+- `docs/packaged-paths-and-extensions.md`: development versus production paths and extension directory design.
