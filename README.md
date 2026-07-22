@@ -1,5 +1,7 @@
 # Mini VSCode
 
+English | [简体中文](README.zh-CN.md)
+
 A compact VS Code clone built for learning Electron and the architecture behind VS Code.
 
 This project is not trying to become a full editor. Its goal is to re-create the most important desktop architecture patterns from VS Code in a smaller, readable codebase: process isolation, a secure preload bridge, renderer-side services and dependency injection, a command registry, Monaco integration, an integrated terminal, an extension host, RPC, language features, and a DAP-based debugging path.
