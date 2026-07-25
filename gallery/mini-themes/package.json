@@ -1,0 +1,18 @@
+{
+  "name": "mini-themes",
+  "displayName": "Mini Themes",
+  "description": "A static color theme contribution for Mini VSCode.",
+  "publisher": "mini-vscode",
+  "version": "1.0.0",
+  "activationEvents": [],
+  "contributes": {
+    "themes": [
+      {
+        "id": "Mini Ocean",
+        "label": "Mini Ocean",
+        "uiTheme": "vs-dark",
+        "path": "./themes/mini-ocean-color-theme.json"
+      }
+    ]
+  }
+}

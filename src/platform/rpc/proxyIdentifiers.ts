@@ -13,6 +13,14 @@ export interface ContributedCommand {
   category?: string
 }
 
+/** manifest 的 `contributes.themes` 中声明的颜色主题 */
+export interface ContributedColorTheme {
+  id?: string
+  label?: string
+  uiTheme: 'vs' | 'vs-dark'
+  path: string
+}
+
 /** workbench 关心的扩展 manifest 子集 */
 export interface ExtensionDescription {
   id: string
@@ -22,6 +30,7 @@ export interface ExtensionDescription {
   activationEvents: string[]
   contributes: {
     commands?: ContributedCommand[]
+    themes?: ContributedColorTheme[]
   }
   extensionPath: string
 }

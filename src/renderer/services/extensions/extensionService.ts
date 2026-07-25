@@ -12,12 +12,15 @@ import {
 	type ExtHostExtensionServiceShape,
 	type ExtHostCommandsShape,
 	type ExtensionDescription,
+	type ContributedColorTheme,
 } from "../../../platform/rpc/proxyIdentifiers";
 import { extHostPortPromise } from "../../platform/extHostPort";
 import { ICommandService } from "../commands/commandService";
 import { INotificationService, type NotificationSeverity } from "../notification/notificationService";
 import { IStorageService, StorageScope } from "../storage/storageService";
 import { ILanguageFeaturesService } from "../language/languageFeaturesService";
+import { IThemeService } from "../theme/themeService";
+import { loadColorThemeFromJson } from "../../themes/color-theme-json-loader";
 
 export interface GalleryItem {
 	id: string;
@@ -93,6 +96,9 @@ export class ExtensionService implements IExtensionService {
 	/** id → 该扩展注册命令对应的 disposable 集合 */
 	private readonly _commandDisposables = new Map<string, IDisposable[]>();
 
+	/** id → 该扩展贡献颜色主题对应的 disposable 集合 */
+	private readonly _themeDisposables = new Map<string, IDisposable[]>();
+
 	/** 扩展宿主运行时动态注册（非 manifest 贡献）的命令 → disposable */
 	private readonly _dynamicCommandDisposables = new Map<string, IDisposable>();
 
@@ -103,7 +109,8 @@ export class ExtensionService implements IExtensionService {
 		@ICommandService private readonly commandService: ICommandService,
 		@INotificationService private readonly notificationService: INotificationService,
 		@IStorageService private readonly storageService: IStorageService,
-		@ILanguageFeaturesService private readonly languageFeatures: ILanguageFeaturesService
+		@ILanguageFeaturesService private readonly languageFeatures: ILanguageFeaturesService,
+		@IThemeService private readonly themeService: IThemeService
 	) {}
 
 	async start(): Promise<void> {
@@ -152,6 +159,7 @@ export class ExtensionService implements IExtensionService {
 		await this._extHostExtensions.$setDisabledExtensions([...this._disabled]);
 		this._installed = await this._extHostExtensions.$getExtensions();
 		this._reconcileCommands();
+		await this._reconcileThemes();
 		// 启动即激活 * / onStartupFinished 扩展（懒激活扩展仍等各自命令触发）
 		await this._extHostExtensions.$activateByEvent("onStartupFinished");
 
@@ -259,6 +267,7 @@ export class ExtensionService implements IExtensionService {
 			this._status.delete(id);
 		}
 		this._reconcileCommands();
+		await this._reconcileThemes();
 		this._fireChange();
 	}
 
@@ -280,6 +289,7 @@ export class ExtensionService implements IExtensionService {
 	private async _refreshInstalled(): Promise<void> {
 		this._installed = await this._extHostExtensions.$rescan();
 		this._reconcileCommands();
+		await this._reconcileThemes();
 		this._fireChange();
 	}
 
@@ -323,6 +333,109 @@ export class ExtensionService implements IExtensionService {
 		this._commandDisposables.get(id)?.forEach((d) => d.dispose());
 		this._commandDisposables.delete(id);
 	}
+
+	/** 为已安装且启用的扩展加载静态颜色主题；这个过程不激活扩展代码。 */
+	private async _reconcileThemes(): Promise<void> {
+		const shouldHave = new Set(this._installed.filter((e) => !this._disabled.has(e.id)).map((e) => e.id));
+
+		for (const id of [...this._themeDisposables.keys()]) {
+			if (!shouldHave.has(id)) this._disposeThemes(id);
+		}
+
+		for (const ext of this._installed) {
+			if (!shouldHave.has(ext.id) || this._themeDisposables.has(ext.id)) continue;
+			this._themeDisposables.set(ext.id, await this._registerThemes(ext));
+		}
+	}
+
+	private async _registerThemes(ext: ExtensionDescription): Promise<IDisposable[]> {
+		const disposables: IDisposable[] = [];
+		const contributions = Array.isArray(ext.contributes.themes) ? ext.contributes.themes : [];
+
+		for (let index = 0; index < contributions.length; index += 1) {
+			const contribution = contributions[index];
+			try {
+				const theme = await this._loadContributedTheme(ext, contribution, index);
+				if (theme) disposables.push(this.themeService.registerColorTheme(theme));
+			} catch (error) {
+				console.warn(
+					`[ExtensionService] failed to load color theme from "${ext.id}":`,
+					error
+				);
+			}
+		}
+
+		return disposables;
+	}
+
+	private async _loadContributedTheme(
+		ext: ExtensionDescription,
+		contribution: ContributedColorTheme,
+		index: number
+	) {
+		if (
+			(contribution.uiTheme !== "vs" && contribution.uiTheme !== "vs-dark") ||
+			typeof contribution.path !== "string"
+		) {
+			console.warn(`[ExtensionService] invalid color theme contribution in "${ext.id}".`);
+			return undefined;
+		}
+
+		const resourcePath = resolveExtensionResourcePath(ext.extensionPath, contribution.path);
+		if (!resourcePath) {
+			console.warn(
+				`[ExtensionService] color theme path must stay inside extension "${ext.id}": ${contribution.path}`
+			);
+			return undefined;
+		}
+
+		const raw = await window.electronAPI.fs.readFile(resourcePath);
+		const json = JSON.parse(raw) as unknown;
+		const fallbackName = contribution.path
+			.replace(/\\/g, "/")
+			.split("/")
+			.pop()
+			?.replace(/\.json$/i, "") || `theme-${index + 1}`;
+		const id = contribution.id?.trim() || contribution.label?.trim() || `${ext.id}.${fallbackName}`;
+		const baseThemeId = contribution.uiTheme === "vs-dark" ? "Dark+" : "Light+";
+		const baseTheme = this.themeService.getColorThemes().find((theme) => theme.id === baseThemeId);
+		if (!baseTheme) throw new Error(`Base color theme "${baseThemeId}" is not registered.`);
+
+		return loadColorThemeFromJson({
+			id,
+			label: contribution.label?.trim() || id,
+			source: "extension",
+			extensionId: ext.id,
+			baseTheme,
+			json
+		});
+	}
+
+	private _disposeThemes(id: string): void {
+		this._themeDisposables.get(id)?.forEach((d) => d.dispose());
+		this._themeDisposables.delete(id);
+	}
 }
 
 registerSingleton(IExtensionService, ExtensionService);
+
+/**
+ * Renderer 不能导入 node:path。这里仅接受扩展内相对资源，拒绝绝对路径和 `..`，
+ * 再按 extensionPath 自己的分隔符拼接，最后通过 preload 的 fs 能力读取。
+ */
+function resolveExtensionResourcePath(extensionPath: string, relativePath: string): string | undefined {
+	const normalized = relativePath.replace(/\\/g, "/");
+	if (
+		normalized.length === 0 ||
+		normalized.startsWith("/") ||
+		/^[a-zA-Z]:\//.test(normalized) ||
+		normalized.split("/").includes("..")
+	) {
+		return undefined;
+	}
+
+	const segments = normalized.split("/").filter((segment) => segment && segment !== ".");
+	if (segments.length === 0) return undefined;
+	const separator = extensionPath.includes("\\") ? "\\" : "/";
+	return `${extensionPath.replace(/[\\/]+$/, "")}${separator}${segments.join(separator)}`;
+}

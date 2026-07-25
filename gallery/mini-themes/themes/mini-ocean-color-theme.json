@@ -1,0 +1,54 @@
+{
+  "name": "Mini Ocean",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#0b1320",
+    "editor.foreground": "#d8e6f3",
+    "sideBar.background": "#101c2c",
+    "activityBar.background": "#07101d",
+    "statusBar.background": "#006d77",
+    "titleBar.activeBackground": "#0d1b2a",
+    "tab.activeBackground": "#0b1320",
+    "tab.inactiveBackground": "#15263a",
+    "tab.activeBorder": "#5bc0be",
+    "panel.background": "#0d1b2a",
+    "input.background": "#15263a",
+    "list.hoverBackground": "#18324a",
+    "list.activeSelectionBackground": "#1d4f63",
+    "focusBorder": "#5bc0be"
+  },
+  "tokenColors": [
+    {
+      "scope": "comment",
+      "settings": {
+        "foreground": "#6f9d91",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "scope": "string",
+      "settings": {
+        "foreground": "#f4d35e"
+      }
+    },
+    {
+      "scope": "keyword",
+      "settings": {
+        "foreground": "#5bc0be",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "scope": "number",
+      "settings": {
+        "foreground": "#ee964b"
+      }
+    }
+  ],
+  "semanticHighlighting": true,
+  "semanticTokenColors": {
+    "function": "#9ad1d4",
+    "variable": "#c6d8e4",
+    "type": "#78c6a3"
+  }
+}
