@@ -2,6 +2,9 @@
 // 该文件由 tsconfig.web.json 引用，让 renderer 侧获得完整类型检查。
 
 export interface ElectronAPI {
+  environment: {
+    isElectron: boolean
+  }
   window: {
     minimize: () => Promise<void>
     maximize: () => Promise<void>

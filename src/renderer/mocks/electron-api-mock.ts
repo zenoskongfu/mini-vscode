@@ -6,6 +6,7 @@
 
 const noop = (): Promise<void> => Promise.resolve()
 const noopCleanup = (): (() => void) => () => undefined
+const PREVIEW_SETTINGS_KEY = 'mini-vscode:preview:settings'
 
 /**
  * 一个会回显输入的假终端（带 prompt 和简单行编辑），
@@ -84,16 +85,18 @@ const FAKE_DIRS: Record<string, Array<{ name: string; path: string; isDirectory:
  * 让主题切换和实时设置更新可以在浏览器预览中验证。
  */
 function createConfigMock(): Window['electronAPI']['config'] {
-  let settings: Record<string, unknown> = {
+  const defaults: Record<string, unknown> = {
     'workbench.colorTheme': 'Dark+',
     'editor.fontSize': 13,
     'editor.minimap.enabled': true
   }
+  let settings = { ...defaults, ...readPreviewSettings() }
   const cbs = new Set<(s: Record<string, unknown>) => void>()
   return {
     get: () => Promise.resolve(settings),
     set: (partial: Record<string, unknown>) => {
       settings = { ...settings, ...partial }
+      localStorage.setItem(PREVIEW_SETTINGS_KEY, JSON.stringify(settings))
       cbs.forEach(cb => cb(settings))
       return Promise.resolve()
     },
@@ -105,10 +108,24 @@ function createConfigMock(): Window['electronAPI']['config'] {
   }
 }
 
+function readPreviewSettings(): Record<string, unknown> {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(PREVIEW_SETTINGS_KEY) ?? '{}')
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {}
+  } catch {
+    return {}
+  }
+}
+
 export function injectElectronAPIMock(): void {
   if (typeof window !== 'undefined' && window.electronAPI) return  // 已存在真实 preload
 
   const mock: Window['electronAPI'] = {
+    environment: {
+      isElectron: false
+    },
     window: {
       minimize: noop,
       maximize: noop,

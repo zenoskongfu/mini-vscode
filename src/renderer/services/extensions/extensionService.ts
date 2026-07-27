@@ -105,6 +105,8 @@ export class ExtensionService implements IExtensionService {
 	/** id → 瞬时状态（中间态）；缺省视为 idle */
 	private readonly _status = new Map<string, ExtensionStatus>();
 
+	private _startPromise: Promise<void> | undefined;
+
 	constructor(
 		@ICommandService private readonly commandService: ICommandService,
 		@INotificationService private readonly notificationService: INotificationService,
@@ -113,13 +115,23 @@ export class ExtensionService implements IExtensionService {
 		@IThemeService private readonly themeService: IThemeService
 	) {}
 
-	async start(): Promise<void> {
+	start(): Promise<void> {
+		this._startPromise ??= this._start();
+		return this._startPromise;
+	}
+
+	private async _start(): Promise<void> {
 		this._disabled = new Set(this.storageService.getObject<string[]>(DISABLED_KEY, StorageScope.GLOBAL, []));
 
 		// 先加载 gallery；即使没有扩展宿主也能工作，因此 Extensions
 		// 视图可以立即渲染（浏览器预览没有端口，也能显示）。
 		this._gallery = await window.electronAPI.extensions.listGallery();
 		this._fireChange();
+
+		if (!window.electronAPI.environment.isElectron) {
+			console.log("[renderer] browser preview: extension host connection skipped");
+			return;
+		}
 
 		const port = await extHostPortPromise;
 		port.start();

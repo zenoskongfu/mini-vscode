@@ -179,7 +179,7 @@ export function registerWorkbenchContributions(insta: IInstantiationService): vo
       const previewListener = quickInputService.onDidChangeActivePickItem(item => {
         const themeId = item?.value
         if (typeof themeId === 'string' && themeId !== themeService.current.id) {
-          themeService.applyTheme(themeId)
+          themeService.applyTheme(themeId, 'preview')
         }
       })
 
@@ -205,7 +205,7 @@ export function registerWorkbenchContributions(insta: IInstantiationService): vo
       if (selected) {
         await configurationService.updateValue('workbench.colorTheme', selected.value)
       } else {
-        themeService.applyTheme(previousThemeId)
+        themeService.applyTheme(previousThemeId, 'preview')
       }
     }
   )

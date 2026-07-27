@@ -1,8 +1,6 @@
 import { loader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor";
 import type { ThemeDefinition } from "../themes/theme-types";
-import { darkPlus } from "../themes/dark-plus";
-import { lightPlus } from "../themes/light-plus";
 
 // Web worker：Vite 会通过 ?worker 后缀分别打包，让 Monaco 可离线运行
 // （不依赖 CDN），这在 Electron 内是必需的。
@@ -57,10 +55,6 @@ export function setupMonaco(): void {
 	};
 
 	configureTypeScript();
-	// 预先定义两套自定义主题，保证编辑器首帧主题名就存在（避免闪烁）
-	defineMonacoTheme(darkPlus);
-	defineMonacoTheme(lightPlus);
-	monaco.editor.setTheme(monacoThemeName(darkPlus.id));
 }
 
 /**

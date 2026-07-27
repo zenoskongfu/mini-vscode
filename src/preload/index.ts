@@ -6,6 +6,10 @@ import { contextBridge, ipcRenderer } from 'electron'
  * 这是有权限 main 进程与网页内容之间的安全边界。
  */
 contextBridge.exposeInMainWorld('electronAPI', {
+  environment: {
+    isElectron: true
+  },
+
   // 窗口控制（供非 macOS 的自定义 TitleBar 使用）
   window: {
     minimize: () => ipcRenderer.invoke('window:minimize'),

@@ -19,6 +19,9 @@ import { registerWorkbenchContributions } from './workbench/contrib/registerCont
 export default function App(): React.JSX.Element {
   const [instantiationService] = useState(() => {
     const insta = createInstantiationService()
+    // 主题服务必须在 Workbench 首次绘制前 eager 创建：
+    // 构造阶段会同步恢复上次成功应用的主题快照。
+    insta.get(IThemeService)
     // 恢复持久化布局（同步，来自 localStorage）
     insta.get(ILayoutService).restore()
     // 注册命令和默认快捷键，并激活 keydown 监听器
@@ -27,18 +30,28 @@ export default function App(): React.JSX.Element {
     return insta
   })
 
-  // 配置由文件支撑（异步）。首屏先使用 globals.css 中已经存在的
-  // 深色默认值；配置加载完成后再初始化主题，
-  // 从而应用已持久化的 workbench.colorTheme。
+  // 首屏主题已由 ThemeService 同步恢复。配置与静态扩展主题异步并行加载：
+  // 配置到达后先应用已知主题，扩展主题注册完成后再做一次最终校正。
   useEffect(() => {
     const config = instantiationService.get(IConfigurationService)
-    config.initialize().then(() => {
-      instantiationService.get(IThemeService).initialize()
-    })
+    const themeService = instantiationService.get(IThemeService)
+    const extensionService = instantiationService.get(IExtensionService)
+
+    const configReady = config.initialize()
+      .then(() => themeService.initialize())
+      .catch(error => {
+        console.error('[renderer] failed to initialize configuration:', error)
+        themeService.initialize()
+      })
+    const extensionThemesReady = extensionService.start()
+      .catch(error => {
+        console.error('[renderer] failed to initialize extensions:', error)
+      })
+    void Promise.allSettled([configReady, extensionThemesReady])
+      .then(() => themeService.completeStartup())
+
     // 异步恢复上次打开的文件夹（来自主进程 state.json）
     instantiationService.get(IWorkspaceService).restore()
-    // 连接扩展宿主（浏览器预览中不会收到端口，因此是 no-op）
-    instantiationService.get(IExtensionService).start()
   }, [instantiationService])
 
   return (
