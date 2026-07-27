@@ -2,37 +2,92 @@
 
 ## 总结
 
-目标：把当前写死在代码里的主题逻辑，逐步改成一个更接近 VSCode 的学习版主题系统。范围先控制在两块：
+目标：把当前主题实现逐步改成一个更接近 VSCode 的学习版主题系统。这里追求的不是主题数量，而是尽量保留 VSCode 的关键边界：
 
-- 颜色主题：控制 Workbench、Monaco 编辑器、代码高亮颜色。
-- 文件图标主题：控制 Explorer 和 Editor Tabs 里的文件/文件夹图标。
+- 主题服务是当前主题的唯一所有者。
+- 主题贡献只负责注册资源，配置负责选择和覆盖。
+- 主题元数据注册与主题文件加载分离。
+- Workbench、Monaco、文件图标分别消费同一份已解析主题状态。
+- 初始化、预览、持久化、插件禁用/卸载都有明确生命周期。
 
-暂不做：
+当前进度：
 
-- 产品图标主题。
-- 高对比主题。
-- 跟随系统深浅色。
-- 完整 settings schema UI。
-- marketplace 主题预览。
+- Phase 1～7 已完成，颜色主题已经有注册表、选择器、预览、JSON loader、用户覆盖和插件贡献。
+- Phase 8～10 尚未完成，文件图标仍然写死在 Explorer 和 Editor Tabs 中。
+- 产品图标主题、高对比主题和跟随系统深浅色放在主干稳定之后。
 
 核心主线：
 
 ```text
-内置主题 / 插件贡献主题
-  -> ThemeService 注册表
-  -> settings.json 选择当前主题
-  -> ThemeService 合成最终主题
-  -> 应用到 Workbench / Monaco / 文件图标
+内置主题 / 扩展贡献主题
+  -> 主题注册表（只登记元数据和资源位置）
+  -> 配置层选择当前主题
+  -> 按需加载主题文件
+  -> 合并用户 / 工作区覆盖
+  -> 得到已解析主题
+  -> ThemeService 应用到 Workbench / Monaco
   -> UI 通过事件刷新
 ```
 
-## 当前差距
+文件图标主题和产品图标主题沿用同样的“注册 -> 选择 -> 加载 -> 应用 -> 事件”模型，但不把三类主题的数据结构硬塞进同一个类型。
 
-- 颜色主题目前写死在 `src/renderer/services/theme/themeService.ts`，只有 `Dark+` / `Light+`。
-- `workbench.action.selectTheme` 只是深色/浅色切换，没有主题列表、预览、插件主题发现。
-- 插件 manifest 类型目前只明确支持 `contributes.commands`，还没有 `contributes.themes` / `contributes.iconThemes`。
-- 还没有 `workbench.colorCustomizations`、`editor.tokenColorCustomizations`、`editor.semanticTokenColorCustomizations`。
+## 当前实现基线
+
+截至 Phase 7，项目已经具备：
+
+- `ThemeService` 维护内置主题和插件主题注册表。
+- `workbench.action.selectTheme` 从注册表展示主题，支持移动预览、确认持久化和取消恢复。
+- `workbench.colorTheme`、`workbench.colorCustomizations`、`editor.tokenColorCustomizations` 会驱动主题重新合成。
+- 主题 JSON 的 `colors`、`tokenColors` 和学习版 `semanticTokenColors` 能映射到 CSS 变量和 Monaco。
+- 插件可以用 `contributes.themes` 静态贡献主题；安装、启用、禁用、卸载会注册或释放主题，不执行 `extension.js`。
+- Workbench 使用 CSS 变量；Monaco 通过 `defineTheme` / `setTheme` 适配；Terminal 监听主题事件后刷新 xterm 配色。
+
+仍然明显可见的问题：
+
+- `setupMonaco()` 在 React 和 `ThemeService.initialize()` 之前固定注册并应用 `Dark+`；随后 `ThemeService` 再根据配置应用一次主题，首次主题有两个所有者，浅色或插件主题启动时可能先闪一下深色。
+- 插件主题注册时就读取并解析所有主题 JSON，注册元数据和加载主题资源还没有分层。
+- 静态扩展描述来自扩展宿主的扫描结果。虽然不会激活扩展代码，但主题发现仍要等待 MessagePort 和扩展宿主连接。
+- 配置只有 `~/.mini-vscode/settings.json` 一层，还没有项目根目录 `.vscode/settings.json`。
+- 主题文件里的 `semanticTokenColors` 只有简单映射，还不支持用户级 `editor.semanticTokenColorCustomizations` 和完整 selector 优先级。
+- VSCode color id 到 CSS 变量仍是手工映射；Debug、Command Palette、断点等位置还有未纳入主题系统的硬编码颜色。
 - 文件图标颜色分别写死在 Explorer 和 Editor Tabs 的 `FILE_COLORS` 中，重复且不可配置。
+
+## 与 VSCode 真正主题系统的差距
+
+| 维度 | 当前项目 | VSCode 的做法 | 学习优先级 |
+| --- | --- | --- | --- |
+| 首帧与所有权 | `setupMonaco()` 先固定应用 `Dark+`，配置加载后 `ThemeService` 再应用 | `WorkbenchThemeService` 是 eager service，先从 storage 恢复上次已解析的颜色/图标，扩展注册完成后再加载真实主题并校正 | P0 |
+| 注册与加载 | 注册 `ColorThemeData` 时主题已经完整加载 | 注册表先保存主题 id、label、资源位置和扩展信息；选中时再 `ensureLoaded` | P0 |
+| 静态扩展点 | Renderer 从扩展宿主取得 manifest，再注册主题 | Workbench 侧消费已安装扩展描述并建立 ThemeRegistry；静态主题贡献不依赖扩展代码激活 | P1 |
+| 配置层级 | 只有默认值和用户 settings | 默认、用户、远程、工作区、工作区文件夹等层级；预览和写入目标也是显式参数 | P1 |
+| 颜色注册表 | 手写 `color id -> CSS 变量` 映射，组件直接依赖私有变量 | `registerColor(id, defaults, description)` 建立公共颜色 token、默认值和 schema，再由主题解析与 theming participant 生成动态 CSS | P1 |
+| 主题文件兼容 | 支持常用 `colors`、TextMate token 和简单语义 token 映射 | 支持 `include`、更完整的 TextMate scope、语义 token selector/修饰符/语言限定、主题文件监听与重载 | P2 |
+| 注册表生命周期 | 重复 id 只 warning；当前插件主题移除后回退 `Dark+` | 注册表发出 added/removed 事件；主题暂时消失时记住原主题，资源恢复后可自动恢复；加载错误有明确诊断 | P1 |
+| 三类主题 | 颜色主题主干已完成；文件图标和产品图标未完成 | 颜色主题、文件图标主题、产品图标主题各有独立 registry/data/loader/event，但由一个 WorkbenchThemeService 协调 | P1/P3 |
+| 高对比与系统主题 | 只有 `dark` / `light` | 还有高对比类型、首选颜色方案和系统深浅色监听 | P3 |
+
+## 可以保留的学习版差异
+
+缩小差距不等于逐行复制 VSCode。以下差异可以保留，只要边界清楚：
+
+- 项目使用 standalone Monaco，所以最终仍需要 `defineTheme()` / `setTheme()` 适配；VSCode 内部编辑器直接消费平台主题服务。需要修正的是“只能由 `ThemeService` 调用”，不是删掉 Monaco 适配层。
+- Workbench 继续使用 CSS 变量是合理的。VSCode 会从 color registry 和 theming participants 生成动态 CSS；本项目可以把 CSS 变量当成生成结果，而不是让它们继续充当公共颜色注册表本身。
+- 先做单根工作区的 default/user/workspace 三层即可，不必立即复制 remote、profile、workspace folder 和 settings sync。
+- 暂不做完整 settings schema UI、未安装 Marketplace 主题预览和遥测；它们不是主题解析与应用主链路。
+
+这里有一个容易混淆但很重要的结论：**主题来源优先级**和**配置覆盖优先级**不是一回事。
+
+```text
+主题来源：
+  内置主题 / 扩展主题 -> 都只是向注册表贡献候选主题
+  同 id 冲突应该被诊断，不应该简单规定“插件覆盖内置”
+
+配置覆盖：
+  默认配置 < 用户配置 < 工作区配置
+  主题默认颜色 < 用户 colorCustomizations < 工作区 colorCustomizations
+```
+
+也就是说，`.vscode/settings.json` 决定“选哪个主题、再覆盖哪些 token”，插件只负责“提供哪些主题资源”。
 
 VSCode 参考：
 
@@ -41,14 +96,27 @@ VSCode 参考：
 - [Theme settings/types](https://github.com/microsoft/vscode/blob/main/src/vs/workbench/services/themes/common/workbenchThemeService.ts)
 - [Theme extension points](https://github.com/microsoft/vscode/blob/main/src/vs/workbench/services/themes/common/themeExtensionPoints.ts)
 - [ColorThemeData](https://github.com/microsoft/vscode/blob/main/src/vs/workbench/services/themes/common/colorThemeData.ts)
+- [Color registry](https://github.com/microsoft/vscode/blob/main/src/vs/platform/theme/common/colorRegistry.ts)
 - [Theme configuration](https://github.com/microsoft/vscode/blob/main/src/vs/workbench/services/themes/common/themeConfiguration.ts)
 - [FileIconThemeData](https://github.com/microsoft/vscode/blob/main/src/vs/workbench/services/themes/browser/fileIconThemeData.ts)
 
 ## 可行性结论
 
-整体方向可行，但不要把颜色主题、插件主题、文件图标主题一次性塞进一个大改动。推荐按下面的 phase 拆开做，每个 phase 都保持应用可以启动、默认 `Dark+` / `Light+` 行为不倒退。
+当前方向是正确的，Phase 1～7 已经走通了“贡献、选择、解析、应用、响应变化”主干。下一步不应该继续堆更多主题字段，而应该先收紧所有权和生命周期，再做文件图标。
 
-最适合的顺序是：先做颜色主题注册表，再做主题选择器，再做主题 JSON 和用户覆盖，最后接插件贡献和文件图标主题。
+推荐顺序：
+
+```text
+Phase 7.1 首帧恢复与单一所有权
+  -> Phase 7.2 元数据注册、按需加载与静态扩展点
+  -> Phase 8～10 文件图标主题
+  -> Phase 11 配置层级和写入目标
+  -> Phase 12 公共颜色注册表
+  -> Phase 13 主题文件兼容、监听和语义 token
+  -> Phase 14 产品图标、高对比和系统主题（后置）
+```
+
+为了学习 VSCode 架构，Phase 7.1、7.2、11、12 的价值高于继续增加 JSON 字段数量。
 
 ## Phase 0：文档收口
 
@@ -293,6 +361,94 @@ themes?: {
 - 当前主题来自被卸载插件时，自动回退到 `Dark+`。
 - 插件主题不需要 activation event，也不需要执行 extension.js。
 
+## Phase 7.1：首帧恢复与主题单一所有权
+
+状态：已完成。
+
+目标：让 `ThemeService` 成为首次主题和后续主题的唯一所有者，消除固定 `Dark+` 首帧和重复应用。
+
+背景：
+
+```text
+当前：
+  index.tsx -> setupMonaco() -> 固定 setTheme(Dark+)
+  React 首屏
+  -> ConfigurationService.initialize()
+  -> ThemeService.initialize()
+  -> 再应用用户配置主题
+
+目标：
+  创建 DI 容器
+  -> eager 创建 ThemeService
+  -> 同步恢复上次成功应用的已解析主题
+  -> React 首屏
+  -> 配置与扩展主题注册表就绪
+  -> 加载并校正真实主题
+```
+
+任务：
+
+- `setupMonaco()` 只保留 loader、worker 和语言默认配置，不再决定具体颜色主题。
+- 在 Workbench 首次绘制前显式创建 `ThemeService`；学习版无需先完整复制 VSCode 的 `InstantiationType.Eager`，但要保留“核心服务 eager 恢复状态”的语义。
+- 为已成功加载的当前主题保存一份启动快照，至少包括：
+  - 主题 id、type、Monaco base。
+  - 已解析 CSS colors。
+  - 已解析 Monaco token rules。
+- 启动时先同步应用快照；没有可用快照时才使用内置 `Dark+`。
+- 配置和静态主题注册完成后，再按 `workbench.colorTheme` 加载真实主题并校正。
+- 预览主题不写启动快照，取消预览也不污染启动状态。
+- 快照来自已卸载插件时，允许它只负责首帧；注册表完成校正后回退到可用内置主题。
+- Electron `BrowserWindow.backgroundColor` 与默认启动主题策略保持一致，避免窗口创建阶段先出现固定深色底。
+
+验收：
+
+- 配置为 `Light+` 后重启，不先出现 `Dark+` 的 Workbench 或 Monaco 首帧。
+- 配置为 `Mini Ocean` 后重启，插件代码不激活，首帧仍尽量保持上次主题。
+- `setupMonaco()` 中没有具体 `Dark+` / `Light+` 的注册和应用逻辑。
+- 主题预览后按 Esc，再重启不会恢复到被取消的预览主题。
+- 删除提供当前主题的插件后重启，应用能从快照平滑校正到 `Dark+`，不白屏。
+
+## Phase 7.2：主题元数据、按需加载与静态扩展点边界
+
+目标：让主题注册表管理“有哪些主题”，loader 只在需要时管理“主题文件里是什么”，并让静态贡献不依赖扩展宿主运行时。
+
+任务：
+
+- 把插件主题贡献先规范化成未加载元数据：
+
+```ts
+interface ColorThemeContribution {
+  id: string
+  label: string
+  uiTheme: 'vs' | 'vs-dark'
+  location: string
+  extensionId?: string
+}
+```
+
+- `ThemeRegistry` 负责：
+  - 注册和注销主题元数据。
+  - 查询、排序和 added/removed 变化事件。
+  - 检测 settings id 冲突、资源越界和 `monacoThemeName()` 归一化后的名称冲突。
+- `ColorThemeData` 增加 unloaded/loaded 状态；选择、预览或启动恢复真实主题时才 `ensureLoaded()`。
+- 给主题切换加串行队列或版本号，避免快速预览时较慢的旧加载结果覆盖较新的选择。
+- 当前主题被禁用或卸载时记住缺失主题 id，临时回退内置主题；相同主题重新出现时按配置自动恢复。
+- 加载失败时保留上一套成功主题，并通过 Notification/日志指出主题 id、扩展 id 和资源路径。
+- 把“已安装扩展描述”从“扩展宿主扫描结果”提升为静态扩展贡献的公共来源：
+  - main 继续持有扩展目录和文件系统真相。
+  - Renderer 从主进程取得已安装 manifest 描述并注册 commands/themes 等静态贡献。
+  - 扩展宿主只负责 activation、运行时 API 和动态注册，不再是静态主题发现的前置条件。
+- 浏览器 preview 使用同一份 manifest mock，保证没有扩展宿主端口时仍可验证静态贡献。
+
+验收：
+
+- 安装多个主题插件时，启动只加载当前主题文件；打开选择器只需要主题元数据。
+- 快速上下移动预览时，最终显示的一定是最后选中的主题。
+- 暂时禁用当前主题插件会回退；重新启用后，配置不变且主题自动恢复。
+- 重复 id、Monaco 名称冲突、越界路径和损坏 JSON 都有明确诊断，不覆盖已有主题。
+- 人为延迟扩展宿主连接时，插件主题仍能出现在主题选择器中。
+- 插件主题整个注册、选择和应用过程不会执行 `extension.js`。
+
 ## Phase 8：文件图标基础收口
 
 目标：先去掉重复硬编码，让 Explorer 和 Editor Tabs 使用同一套图标解析逻辑。
@@ -381,6 +537,129 @@ iconThemes?: {
 - 禁用或卸载插件后，该图标主题消失。
 - 当前图标主题来自被卸载插件时，回退到默认 `mini-icons`。
 
+## Phase 11：配置层级和主题写入目标
+
+目标：补上单工作区场景下最有学习价值的配置优先级，不急着复制远程、Profile 和多根工作区。
+
+任务：
+
+- 把配置模型拆成：
+
+```text
+defaults
+  < ~/.mini-vscode/settings.json
+  < <workspace>/.vscode/settings.json
+```
+
+- `ConfigurationService` 暴露合并后的值，并能 `inspect(key)` 看见 default/user/workspace 各层值。
+- 工作区打开、切换或关闭时，更新 `.vscode/settings.json` watcher 和有效配置。
+- `workbench.colorTheme`、`workbench.colorCustomizations`、`editor.tokenColorCustomizations` 按层合并。
+- 将主题应用与配置写入解耦，接口显式区分：
+  - `preview`：只应用，不写配置和启动快照。
+  - `user`：写用户 settings。
+  - `workspace`：写 `.vscode/settings.json`。
+  - `auto`：写回当前实际生效值所在层，找不到时写 user。
+- 选择主题时默认保持当前简单体验；增加“写到工作区”的命令或明确入口，不强迫每次弹二级菜单。
+
+验收：
+
+- 用户配置为 `Dark+`、工作区配置为 `Light+` 时，打开该工作区使用 `Light+`。
+- 关闭工作区后恢复用户主题。
+- 删除工作区主题配置后立即回到用户主题。
+- 工作区颜色覆盖只影响该工作区，不改用户 settings。
+- 预览、取消、确认分别只产生预期层级的写入。
+
+## Phase 12：公共颜色注册表与硬编码颜色收口
+
+目标：让 UI 依赖有语义的 VSCode color id，而不是由主题 loader 和组件共同维护一套私有 CSS 变量约定。
+
+任务：
+
+- 实现学习版 `ColorRegistry`：
+
+```ts
+registerColor(
+  id,
+  { dark, light, highContrast? },
+  description
+)
+```
+
+- 内置组件注册自己使用的颜色 token；主题只覆盖 token 值，不关心组件文件名。
+- `ThemeService` 用“主题颜色 -> token 默认值 -> 最终颜色”的顺序解析，并集中生成 CSS 变量。
+- 现有 `--color-*` 可以作为迁移期输出，不要求一次重写所有 CSS。
+- 为少量无法只靠 CSS 变量表达的场景提供学习版 theming participant；普通组件继续优先使用 CSS 变量。
+- 审计并迁移这些明显硬编码：
+  - Debug View / Debug Console 状态色。
+  - Command Palette 特殊文字色。
+  - Monaco 断点装饰色。
+  - 窗口初始背景色。
+  - Explorer / Tabs 文件图标色由 Phase 8～10 处理，不混入颜色主题。
+- 未注册 color id 和主题中未知 color id 分别给出诊断。
+
+验收：
+
+- 新增一个 UI 颜色只需要注册 color id 并在组件消费，不需要修改主题服务核心逻辑。
+- `Dark+` / `Light+` 在缺少某个主题覆盖时能使用各自 token 默认值。
+- 切换主题后 Debug、Command Palette 和断点颜色一起变化。
+- 主题 JSON 中未知 token 不白屏，并能定位到具体 id。
+
+## Phase 13：主题文件兼容、监听与语义 token
+
+目标：在不复制 VSCode 全部兼容历史的前提下，让常见 VSCode 颜色主题可以更少改动地运行。
+
+任务：
+
+- 支持主题 JSON `include`，实现相对路径解析、合并顺序和循环引用检测。
+- 补齐常见 TextMate `scope` 数组、多 scope 字符串和 `fontStyle` 合并行为。
+- 支持语义 token selector 的最小正确子集：
+
+```text
+type
+type.modifier
+type:language
+type.modifier:language
+```
+
+- 支持 `editor.semanticTokenColorCustomizations`，并与主题文件中的 `semanticTokenColors` 按主题限定和配置层级合并。
+- 明确职责：
+  - LSP/语言扩展提供 semantic tokens 数据。
+  - 主题系统只解析 selector、决定样式并交给 Monaco。
+  - 没有 semantic token provider 时，不伪造语义 token。
+- 只监听当前已加载主题资源；扩展开发模式下文件变化会 reload，普通未选中主题不建立 watcher。
+- reload 失败时继续使用上一份有效主题，并展示错误。
+- 增加 loader fixture，覆盖 include、循环引用、错误 JSON、TextMate scopes 和语义 selector 优先级。
+
+验收：
+
+- 一个带 `include` 的常见 VSCode 主题能加载并正确覆盖父主题。
+- 循环 include 不会卡死，错误能指出资源链。
+- 修改当前开发主题 JSON 后，无需重启即可刷新。
+- 没有 semantic token provider 时只有 TextMate 高亮；安装提供者后语义颜色按 selector 生效。
+- 较具体的 `type.modifier:language` 能覆盖较宽泛的 `type`。
+
+## Phase 14：产品图标、高对比和系统主题
+
+状态：后置，Phase 7.1～13 稳定后再做。
+
+目标：补齐 VSCode 的第三类主题和颜色方案变化，但不阻塞颜色/文件图标主干。
+
+任务：
+
+- 产品图标独立实现 `ProductIconThemeRegistry`、数据、loader、当前主题和变化事件。
+- 支持 `workbench.productIconTheme` 与 `contributes.productIconThemes`。
+- 先只让 Workbench 中共享 action icon 走产品图标主题，不把文件图标混进来。
+- 颜色主题类型扩展到 `hcDark` / `hcLight`，补充必要的对比度和 focus border token。
+- 增加跟随系统深浅色设置，监听 Electron 原生主题变化。
+- 沿用 Phase 7.1 的启动快照，以及 Phase 7.2 的注册、按需加载和移除恢复机制。
+
+验收：
+
+- 切换产品图标主题不改变文件图标。
+- 插件产品图标主题不需要激活扩展代码。
+- 系统深浅色变化只在开启跟随设置时切换。
+- 高对比主题至少保证焦点、选中、错误和输入边框可辨识。
+
 ## 验证计划
 
 每个 phase 完成后至少运行：
@@ -398,18 +677,28 @@ pnpm dev
 
 重点检查：
 
-- 默认 `Dark+` 能正常显示。
-- `Light+` 能正常切换。
+- 默认 `Dark+` 能正常显示，`Light+` 能正常切换。
+- 重启时首帧、Workbench 和 Monaco 不出现不同主题。
 - 主题选择器不影响命令面板。
+- 快速预览、取消和确认没有异步竞态。
 - 改 `settings.json` 后 UI 能实时响应。
-- 插件安装、禁用、卸载不会让主题系统崩溃。
+- 插件安装、禁用、卸载、重新启用不会让主题系统崩溃或丢失配置意图。
+- 损坏主题文件、重复 id 和资源路径错误不会覆盖上一份有效主题。
+- 用户和工作区配置按预期合并，不相互污染。
 - Explorer 和 Editor Tabs 的文件图标保持一致。
 
 ## 实现原则
 
-- 不追求一次性完整复刻 VSCode，优先学习它的主干机制。
+- `ThemeService` 是当前主题和应用动作的唯一所有者；`setupMonaco()` 只做 Monaco 环境初始化。
+- 分清四步：注册元数据、加载资源、解析覆盖、应用主题。不要再把四步塞进 `registerColorTheme()`。
+- 分清三类主题：颜色主题、文件图标主题、产品图标主题共享生命周期模型，但数据和事件独立。
+- 分清主题来源和配置层级：插件不是用户设置或 `.vscode/settings.json` 的更高优先级。
+- 预览是显式 target，不写配置、不写启动快照；确认后才持久化。
+- 插件静态贡献不依赖扩展代码激活，注册和注销必须返回 `IDisposable`。
 - 每个 phase 都要能独立验证。
 - Renderer 仍然不能直接 import Node 模块；读文件必须通过现有 preload/main 能力。
 - 保持现有 `Dark+` / `Light+` 配置兼容。
-- Monaco 0.55 没有完整 VSCode `semanticTokenColors` 能力，语义高亮只做学习版近似支持。
+- Monaco 是颜色主题的消费端和适配器，不是 Workbench 主题状态的所有者。
+- 不追求一次性完整复刻 VSCode；优先学习 eager restore、registry、loader、configuration target 和 disposable 生命周期。
 - 文件图标主题先做颜色/内联图形版本，`iconPath`、字体图标、CSS 生成后续再扩展。
+- 暂不复制完整 settings schema UI、Marketplace 未安装主题预览、Profiles、Settings Sync、远程配置和多根工作区；这些不会改变主题系统主干。
